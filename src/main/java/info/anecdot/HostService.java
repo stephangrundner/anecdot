@@ -212,7 +212,7 @@ public class HostService implements CommandLineRunner {
                 try {
                     observe(host);
                 } catch (Exception e) {
-                    LOG.error("Error while observing {}", host.getDirectory());
+                    LOG.error("Error while observing " + host.getDirectory(), e);
                 }
             });
         }
