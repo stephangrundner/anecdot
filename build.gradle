@@ -15,6 +15,11 @@ apply plugin: 'eclipse'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
 
+bootJar {
+	baseName = 'anecdot'
+	archiveName = "$baseName.$extension"
+}
+
 group = 'info.anecdot'
 version = '0.0.1-SNAPSHOT'
 sourceCompatibility = 1.8
