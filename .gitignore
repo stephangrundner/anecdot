@@ -4,13 +4,12 @@
 # Ignore Gradle GUI config
 gradle-app.setting
 
-/gradle/
-
 # Cache of project
 .gradletasknamecache
 
 # # Work around https://youtrack.jetbrains.com/issue/IDEA-116898
 # gradle/wrapper/gradle-wrapper.properties
+!gradle-wrapper.jar
 
 .idea
 /out/
