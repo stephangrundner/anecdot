@@ -7,6 +7,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
@@ -15,7 +16,7 @@ import javax.servlet.http.HttpServletRequest;
  * @author Stephan Grundner
  */
 @Controller
-@RequestMapping(path = "**")
+@RequestMapping
 public class ItemController {
 
     @Autowired
@@ -27,11 +28,13 @@ public class ItemController {
     @Autowired
     private ApplicationContext applicationContext;
 
-    @GetMapping
-    protected ModelAndView page(HttpServletRequest request) {
-        Item item = itemService.findItemByRequest(request);
+    @GetMapping(path = "/item")
+    protected ModelAndView page(@RequestParam(name = "id") Long id) {
+
+//        Item item = itemService.findItemByRequest(request);
+        Item item = itemService.findItemById(id);
         if (item == null) {
-            throw new RuntimeException("Page not found");
+            throw new RuntimeException("No item found for id " + id);
         }
 
         ModelAndView modelAndView = new ModelAndView();

@@ -13,7 +13,6 @@ import java.io.*;
 import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * @author Stephan Grundner
@@ -34,6 +33,7 @@ public class ThumborRunner implements ApplicationRunner {
         }
         instantiated = true;
     }
+
     private Process process;
     private Integer exitValue;
 
@@ -43,7 +43,6 @@ public class ThumborRunner implements ApplicationRunner {
     private OutputStream outputStream = System.out;
 
     private List<String> allowedSources = Collections.singletonList("localhost");
-//    private String secureKey;
 
     public Integer getExitValue() {
         return exitValue;
@@ -91,16 +90,6 @@ public class ThumborRunner implements ApplicationRunner {
         this.allowedSources = allowedSources;
     }
 
-//    public String getSecureKey() {
-//        return secureKey;
-//    }
-//
-//    public void setSecureKey(String secureKey) {
-//        checkIfRunning();
-//
-//        this.secureKey = secureKey;
-//    }
-
     private void checkIfRunning() {
         if (process != null && process.isAlive()) {
             throw new IllegalStateException("Thumbor already running");
@@ -117,21 +106,27 @@ public class ThumborRunner implements ApplicationRunner {
                 size,
                 requestUrl);
 
+        url = url.replaceAll("https://", "http://");
+
         return url;
     }
 
     protected void process(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String url = buildUrl(request);
 
+        long start = System.currentTimeMillis();
         UrlResource resource = new UrlResource(url);
         try (InputStream inputStream = resource.getInputStream();
              OutputStream outputStream = response.getOutputStream()) {
 
             IOUtils.copy(inputStream, outputStream);
-            response.flushBuffer();
+//            response.flushBuffer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+        long stop = System.currentTimeMillis() - start;
+
+        LOG.info("Processing took {} ms", stop);
     }
 
     @Override
@@ -144,16 +139,21 @@ public class ThumborRunner implements ApplicationRunner {
              PrintStream printer = new PrintStream(outputStream)) {
 
             printer.println("LOADER = 'thumbor.loaders.http_loader'");
+            printer.printf("STORAGE='%s'\n", "thumbor.storages.file_storage");
+//            printer.printf("STORAGE_EXPIRATION_SECONDS=%d\n", 60 * 60);
+//            printer.printf("FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
 
-            if (allowedSources != null && !allowedSources.isEmpty()) {
-                printer.printf("ALLOWED_SOURCES = [%s]\n", allowedSources.stream()
-                        .map(it -> String.format("'%s'", it))
-                        .collect(Collectors.joining(",")));
-            }
+            printer.printf("RESULT_STORAGE='%s'\n", "thumbor.result_storages.file_storage");
+//            printer.printf("RESULT_STORAGE_FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
+            printer.printf("RESULT_STORAGE_STORES_UNSAFE=%s\n", "True");
 
-//            if (secureKey != null) {
-//                printer.printf("SECURITY_KEY = '%s'", secureKey);
+//            if (allowedSources != null && !allowedSources.isEmpty()) {
+//                printer.printf("ALLOWED_SOURCES = [%s]\n", allowedSources.stream()
+//                        .map(it -> String.format("'%s'", it))
+//                        .collect(Collectors.joining(",")));
 //            }
+
+            printer.printf("ALLOWED_SOURCES = [%s]\n", "localhost");
         }
 
         ProcessBuilder builder = new ProcessBuilder()

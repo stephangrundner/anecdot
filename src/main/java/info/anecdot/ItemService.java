@@ -39,6 +39,10 @@ public class ItemService {
         this.pathHelper = pathHelper;
     }
 
+    public Item findItemById(Long id) {
+        return itemRepository.findById(id).orElse(null);
+    }
+
     public Item findItemByHostAndUri(Host host, String uri) {
         return itemRepository.findByHostAndUri(host, uri);
     }

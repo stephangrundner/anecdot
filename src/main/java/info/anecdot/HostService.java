@@ -5,12 +5,10 @@ import info.anecdot.io.PathObserver;
 import info.anecdot.model.Host;
 import info.anecdot.model.HostRepository;
 import info.anecdot.model.Item;
-import info.anecdot.util.PropertyResolverUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -19,20 +17,17 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * @author Stephan Grundner
  */
 @Service
-public class HostService implements CommandLineRunner {
+public class HostService {
 
     private static final Logger LOG = LoggerFactory.getLogger(HostService.class);
 
@@ -85,7 +80,7 @@ public class HostService implements CommandLineRunner {
         return hostRepository.findByName(name);
     }
 
-    private void saveHost(Host host) {
+    protected void saveHost(Host host) {
         hostRepository.saveAndFlush(host);
     }
 
@@ -141,7 +136,7 @@ public class HostService implements CommandLineRunner {
         }
     }
 
-    private void observe(Host host) throws IOException {
+    void observe(Host host) throws IOException {
         PathObserver observer = new PathObserver() {
             @Override
             protected void visited(Path file) {
@@ -178,43 +173,5 @@ public class HostService implements CommandLineRunner {
         };
 
         observer.start(host.getDirectory());
-    }
-
-    @Override
-    public void run(String... args) throws Exception {
-//        List keys = environment.getProperty("anecdot.hosts", List.class);
-        List<String> keys = PropertyResolverUtils.getProperties(environment, "anecdot.hosts");
-        for (String key : keys) {
-            Host host = new Host();
-            String prefix = String.format("anecdot.host.%s", key);
-
-            String name = environment.getProperty(prefix + ".name");
-            host.setName(name);
-
-            String directory = environment.getProperty(prefix + ".directory");
-            host.setDirectory(Paths.get(directory));
-
-            List<String> aliases = PropertyResolverUtils.getProperties(environment, prefix + ".aliases");
-            host.getAliases().addAll(aliases);
-
-            String templates = environment.getProperty(prefix + ".templates");
-            host.setTemplates(templates);
-
-            host.setHome(environment.getProperty(prefix + ".home", "/index"));
-
-            saveHost(host);
-        }
-
-        ExecutorService executorService = Executors.newCachedThreadPool();
-
-        for (Host host : findAllHosts()) {
-            executorService.submit(() -> {
-                try {
-                    observe(host);
-                } catch (Exception e) {
-                    LOG.error("Error while observing " + host.getDirectory(), e);
-                }
-            });
-        }
     }
 }

@@ -16,10 +16,13 @@ public class ThumborRequestInterceptor implements HandlerInterceptor {
     @Autowired
     private ThumborRunner thumborRunner;
 
+    private boolean isThumborRequest(HttpServletRequest request) {
+        return request.getParameter("size") != null;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        String thumbor = request.getParameter("thumbor");
-        if (thumbor != null) {
+        if (isThumborRequest(request)) {
             thumborRunner.process(request, response);
 
             return false;
