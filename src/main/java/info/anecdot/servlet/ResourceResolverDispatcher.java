@@ -1,6 +1,7 @@
-package info.anecdot;
+package info.anecdot.servlet;
 
 import info.anecdot.model.Host;
+import info.anecdot.model.HostService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
@@ -8,8 +9,7 @@ import org.springframework.web.servlet.resource.AbstractResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -34,14 +34,8 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
             directory += "/";
         }
 
-        String locationPattern = "file:" + directory + requestPath;
-        try {
-            locations = Arrays.asList(applicationContext.getResources(locationPattern));
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-
-        Resource result = chain.resolveResource(request, requestPath, locations);
+        Resource location = applicationContext.getResource("file:" + directory);
+        Resource result = chain.resolveResource(request, requestPath, Collections.singletonList(location));
 
         return result;
     }

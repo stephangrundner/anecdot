@@ -153,7 +153,7 @@ public class ThumborRunner implements ApplicationRunner {
 //                        .collect(Collectors.joining(",")));
 //            }
 
-            printer.printf("ALLOWED_SOURCES = [%s]\n", "localhost");
+//            printer.printf("ALLOWED_SOURCES = [%s]\n", "localhost");
         }
 
         ProcessBuilder builder = new ProcessBuilder()

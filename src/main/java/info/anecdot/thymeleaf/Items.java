@@ -2,7 +2,7 @@ package info.anecdot.thymeleaf;
 
 import info.anecdot.model.Host;
 import info.anecdot.model.Item;
-import info.anecdot.ItemService;
+import info.anecdot.model.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.domain.Page;

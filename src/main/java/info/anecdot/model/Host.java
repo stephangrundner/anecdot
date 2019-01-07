@@ -1,7 +1,5 @@
 package info.anecdot.model;
 
-import info.anecdot.io.PathConverter;
-
 import javax.persistence.*;
 import java.nio.file.Path;
 import java.util.LinkedHashSet;

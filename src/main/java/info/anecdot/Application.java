@@ -1,6 +1,9 @@
 package info.anecdot;
 
 import info.anecdot.model.Host;
+import info.anecdot.model.HostService;
+import info.anecdot.servlet.RequestInterceptor;
+import info.anecdot.servlet.ResourceResolverDispatcher;
 import info.anecdot.util.PropertyResolverUtils;
 import org.apache.catalina.connector.Connector;
 import org.slf4j.Logger;

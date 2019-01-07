@@ -1,10 +1,7 @@
-package info.anecdot;
+package info.anecdot.model;
 
 import info.anecdot.io.ItemLoader;
 import info.anecdot.io.PathObserver;
-import info.anecdot.model.Host;
-import info.anecdot.model.HostRepository;
-import info.anecdot.model.Item;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +77,7 @@ public class HostService {
         return hostRepository.findByName(name);
     }
 
-    protected void saveHost(Host host) {
+    public void saveHost(Host host) {
         hostRepository.saveAndFlush(host);
     }
 
@@ -136,7 +133,7 @@ public class HostService {
         }
     }
 
-    void observe(Host host) throws IOException {
+    public void observe(Host host) throws IOException {
         PathObserver observer = new PathObserver() {
             @Override
             protected void visited(Path file) {
