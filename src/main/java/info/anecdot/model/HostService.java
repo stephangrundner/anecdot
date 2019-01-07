@@ -1,5 +1,6 @@
 package info.anecdot.model;
 
+import info.anecdot.Crawler;
 import info.anecdot.io.ItemLoader;
 import info.anecdot.io.PathObserver;
 import org.apache.commons.io.FilenameUtils;
@@ -128,6 +129,20 @@ public class HostService {
 
             itemService.savePage(item);
             LOG.info("Reloaded page for file {}", file);
+
+            String url = "http://" + host.getName();
+            if (url.endsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+
+            url += uri;
+
+            try {
+                new Crawler().crawl(url);
+            } catch (Exception e) {
+                LOG.error("Error while crawling {}", url);
+            }
+
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
