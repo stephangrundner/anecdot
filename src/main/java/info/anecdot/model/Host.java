@@ -12,10 +12,11 @@ import java.util.Set;
 public class Host extends Identifiable {
 
     @Convert(converter = PathConverter.class)
-//    @Column(unique = true)
+    @Column(unique = true)
     private Path directory;
 
-    @Column(unique = true)
+    @Deprecated
+    @Column
     private String name;
 
     @ElementCollection
@@ -23,9 +24,8 @@ public class Host extends Identifiable {
             joinColumns = @JoinColumn(name = "host_id"),
             uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "value"}))
     @Column(name = "value")
-    private final Set<String> aliases = new LinkedHashSet<>();
+    private final Set<String> names = new LinkedHashSet<>();
 
-    private String templates;
     private String home;
 
     public Path getDirectory() {
@@ -36,24 +36,18 @@ public class Host extends Identifiable {
         this.directory = directory;
     }
 
+    @Deprecated
     public String getName() {
         return name;
     }
 
+    @Deprecated
     public void setName(String name) {
         this.name = name;
     }
 
-    public Set<String> getAliases() {
-        return aliases;
-    }
-
-    public String getTemplates() {
-        return templates;
-    }
-
-    public void setTemplates(String templates) {
-        this.templates = templates;
+    public Set<String> getNames() {
+        return names;
     }
 
     public String getHome() {

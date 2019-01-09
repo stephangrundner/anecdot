@@ -40,7 +40,7 @@ public class HostService {
     @Autowired
     private Environment environment;
 
-    private String resolveHostName(HttpServletRequest request) {
+    public String resolveHostName(HttpServletRequest request) {
         String hostName = Collections.list(request.getHeaderNames()).stream()
                 .filter(it -> "X-Real-IP".equalsIgnoreCase(it)
                         || "X-Forwarded-For".equalsIgnoreCase(it)
@@ -58,23 +58,13 @@ public class HostService {
         return hostName;
     }
 
-    @Deprecated
-    public Host resolveHost(HttpServletRequest request) {
-        String name = resolveHostName(request);
-        return hostRepository.findByName(name);
-    }
-
     public List<Host> findAllHosts() {
         return hostRepository.findAll();
     }
 
-    public Host findHostByDirectory(Path directory) {
-        return hostRepository.findByDirectory(directory);
-    }
-
     public Host findHostByRequest(HttpServletRequest request) {
         String name = resolveHostName(request);
-        return hostRepository.findByName(name);
+        return hostRepository.findByNamesContaining(name);
     }
 
     public void saveHost(Host host) {

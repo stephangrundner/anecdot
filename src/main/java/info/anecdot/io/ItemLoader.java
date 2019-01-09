@@ -3,9 +3,7 @@ package info.anecdot.io;
 import info.anecdot.model.Fragment;
 import info.anecdot.model.Document;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -25,6 +23,22 @@ import java.time.ZoneOffset;
 @Component
 public class ItemLoader {
 
+    private boolean hasChildElements(Node node) {
+        NodeList children = node.getChildNodes();
+        if (children.getLength() == 0) {
+            return false;
+        }
+
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void toFragment(Node node, Fragment fragment) {
         NodeList children = node.getChildNodes();
         for (int i = 0; i < children.getLength(); i++) {
@@ -34,10 +48,19 @@ public class ItemLoader {
             }
 
             Fragment payload = fromNode(child);
-            fragment.appendChild(child.getNodeName(), payload);
+            String name = child.getNodeName();
+            fragment.appendChild(name, payload);
         }
 
-        fragment.setText(node.getTextContent());
+        if (!hasChildElements(node)) {
+            fragment.setText(node.getTextContent());
+        }
+
+        NamedNodeMap attributes = node.getAttributes();
+        for (int i = 0; i < attributes.getLength(); i++) {
+            Attr attribute = (Attr) attributes.item(i);
+            fragment.getAttributes().put(attribute.getName(), attribute.getValue());
+        }
     }
 
     private Fragment fromNode(Node node) {
@@ -48,13 +71,12 @@ public class ItemLoader {
             toFragment(document, item);
 
             return item;
-
-        } else {
-            Fragment fragment = new Fragment();
-            toFragment(node, fragment);
-
-            return fragment;
         }
+
+        Fragment fragment = new Fragment();
+        toFragment(node, fragment);
+
+        return fragment;
     }
 
     public Document loadPage(Path file) throws IOException {

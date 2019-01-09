@@ -15,11 +15,12 @@ public class Sequence extends Identifiable {
     @ManyToOne(optional = false)
     @JoinColumn(name = "fragment_id")
     private Fragment fragment;
+    private int ordinal;
 
     private String name;
 
     @OneToMany(mappedBy = "sequence", cascade = {CascadeType.ALL}, orphanRemoval = true)
-    @OrderColumn(name = "ordinal")
+    @OrderBy("ordinal ASC")
     private final List<Fragment> children = new ArrayList<>();
 
     public Fragment getFragment() {
@@ -28,6 +29,14 @@ public class Sequence extends Identifiable {
 
     void setFragment(Fragment fragment) {
         this.fragment = fragment;
+    }
+
+    public int getOrdinal() {
+        return ordinal;
+    }
+
+    public void setOrdinal(int ordinal) {
+        this.ordinal = ordinal;
     }
 
     public String getName() {
@@ -45,6 +54,7 @@ public class Sequence extends Identifiable {
     public boolean appendChild(Fragment fragment) {
         if (children.add(fragment)) {
             fragment.setSequence(this);
+            fragment.setOrdinal(children.size() - 1);
 
             return true;
         }

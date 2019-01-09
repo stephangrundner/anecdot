@@ -1,6 +1,7 @@
 package info.anecdot.model;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.nio.file.Path;
@@ -12,5 +13,10 @@ import java.nio.file.Path;
 public interface HostRepository extends JpaRepository<Host, Long> {
 
     Host findByDirectory(Path directory);
-    Host findByName(String name);
+
+//    @Deprecated
+//    Host findByName(String name);
+
+    @Query("select h from Host h where ?1 member of h.names")
+    Host findByNamesContaining(String name);
 }

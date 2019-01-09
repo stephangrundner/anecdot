@@ -11,7 +11,7 @@ import java.io.IOException;
 public class ItemSerializer extends AbstractJsonSerializer<Document> {
 
     private void writeFragment(Fragment fragment) {
-        fragment.getSequences().values().forEach(sequence -> {
+        fragment.getSequences().forEach(sequence -> {
             writeArrayField(sequence.getName(), () -> {
                 writeObject(() -> {
                     writeStringField("property", fragment.getPropertyPath());

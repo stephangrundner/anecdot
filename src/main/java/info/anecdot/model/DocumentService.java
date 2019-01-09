@@ -1,5 +1,6 @@
 package info.anecdot.model;
 
+import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -7,17 +8,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.util.UrlPathHelper;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.*;
 
 /**
  * @author Stephan Grundner
  */
 @Service
-public class DocumentService {
+public class DocumentService extends FragmentService {
 
     private UrlPathHelper pathHelper;
 
@@ -55,10 +52,6 @@ public class DocumentService {
         return documentRepository.findByHostAndUriLike(host, path, PageRequest.of(offset, limit));
     }
 
-//    public List<Article> findDocumentsByHostAndUriLike(Host host, String path) {
-//        return findDocumentsByHostAndUriLike(host, path, 0, Integer.MAX_VALUE);
-//    }
-
     public Document findDocumentByRequest(HttpServletRequest request) {
         Host host = hostService.findHostByRequest(request);
         UrlPathHelper pathHelper = getPathHelper();
@@ -79,29 +72,47 @@ public class DocumentService {
         documentRepository.delete(document);
     }
 
-    public Map<String, Object> toMap(Fragment fragment) {
-        Map<String, Object> model = new LinkedHashMap<>();
+    public Map<String, Object> toMap(Fragment fragment, Map<String, Object> parentMap, int index) {
+        Map<String, Object> map = new LinkedHashMap<>();
 
-        model.put("$fragment", fragment);
-        model.put("$text", fragment.getText());
+        map.put("$index", index);
+        map.put("$ordinal", Optional.ofNullable(fragment.getSequence()).map(Sequence::getOrdinal).orElse(0));
+        map.put("$property", fragment.getPropertyPath());
+        map.put("$text", fragment.getText());
+        map.put("$attributes", fragment.getAttributes());
+        map.put("$fragment", fragment);
 
         List<Object> children = new ArrayList<>();
-        fragment.getSequences().forEach((name, sequence) -> {
-            List<Object> values = sequence.getChildren().stream()
-                    .map(this::toMap)
-                    .collect(Collectors.toList());
-            model.put(name, values);
+
+        for (Sequence sequence : fragment.getSequences()) {
+            String name = sequence.getName();
+            Map<Object, Object> values = new LinkedHashMap<>();
+            int i = 0;
+            for (Fragment child : sequence.getChildren()) {
+                Map<String, Object> childMap = toMap(child, map, i);
+                if (i == 0) {
+                    values.putAll(childMap);
+                }
+                values.put(i++, childMap);
+            }
+            map.put(sequence.getName(), values);
+
             children.add(values);
+        }
+
+        map.put("$parent", new AbstractMapDecorator<String, Object>(parentMap) {
+            @Override
+            public String toString() {
+                Map<String, Object> decorated = decorated();
+                return decorated.getClass().getName() + '@' + System.identityHashCode(decorated);
+            }
         });
+        map.put("$children", children);
 
-        model.put("$children", children);
+        return map;
+    }
 
-//        Sequence sequence = fragment.getSequence();
-//        if (sequence != null) {
-//            model.put("$name", sequence.getName());
-//            model.put("$ordinal", fragment.getOrdinal());
-//        }
-
-        return model;
+    public Map<String, Object> toMap(Fragment fragment) {
+        return toMap(fragment, Collections.emptyMap(), 0);
     }
 }

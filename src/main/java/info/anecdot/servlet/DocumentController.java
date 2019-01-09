@@ -12,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
+import javax.servlet.http.HttpServletRequest;
+
 /**
  * @author Stephan Grundner
  */
@@ -29,9 +31,8 @@ public class DocumentController {
     private ApplicationContext applicationContext;
 
     @GetMapping(path = "/document")
-    protected ModelAndView page(@RequestParam(name = "id") Long id) {
-
-//        Item item = itemService.findDocumentByRequest(request);
+    protected ModelAndView byId(@RequestParam(name = "id") Long id,
+                                HttpServletRequest request) {
         Document document = documentService.findDocumentById(id);
         if (document == null) {
             throw new RuntimeException("No item found for id " + id);
@@ -39,7 +40,9 @@ public class DocumentController {
 
         ModelAndView modelAndView = new ModelAndView();
         modelAndView.addAllObjects(documentService.toMap(document));
-        modelAndView.addObject("$item", document);
+
+        String hostName = hostService.resolveHostName(request);
+        modelAndView.addObject("$hostName", hostName);
 
         Host host = document.getHost();
         String templates = host.getDirectory().resolve("templates").toString();

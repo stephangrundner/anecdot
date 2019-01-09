@@ -31,7 +31,6 @@ import org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 
 import javax.annotation.PostConstruct;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -122,17 +121,11 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 			Host host = new Host();
 			String prefix = String.format("anecdot.host.%s", key);
 
-			String name = environment.getProperty(prefix + ".name");
-			host.setName(name);
+			List<String> names = PropertyResolverUtils.getProperties(environment, prefix + ".names");
+			host.getNames().addAll(names);
 
 			String directory = environment.getProperty(prefix + ".directory");
 			host.setDirectory(Paths.get(directory));
-
-			List<String> aliases = PropertyResolverUtils.getProperties(environment, prefix + ".aliases");
-			host.getAliases().addAll(aliases);
-
-			String templates = environment.getProperty(prefix + ".templates");
-			host.setTemplates(templates);
 
 			host.setHome(environment.getProperty(prefix + ".home", "/index"));
 
