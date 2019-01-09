@@ -1,8 +1,8 @@
 package info.anecdot.thymeleaf;
 
 import info.anecdot.model.Host;
-import info.anecdot.model.Item;
-import info.anecdot.model.ItemService;
+import info.anecdot.model.Document;
+import info.anecdot.model.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.data.domain.Page;
@@ -14,12 +14,12 @@ import org.thymeleaf.context.IExpressionContext;
  */
 @Component
 @Scope("singleton")
-public class Items {
+public class Documents {
 
     private IExpressionContext context;
 
     @Autowired
-    private ItemService itemService;
+    private DocumentService documentService;
 
     public IExpressionContext getContext() {
         return context;
@@ -33,16 +33,16 @@ public class Items {
 //        return ((WebEngineContext) context).getRequest();
 //    }
 
-    public ResultList<Item> byUri(String uri, int offset, int limit) {
-        Item item = (Item) context.getVariable("$item");
-        Host host = item.getHost();
+    public ResultList<Document> byUri(String uri, int offset, int limit) {
+        Document document = (Document) context.getVariable("$item");
+        Host host = document.getHost();
 
-        Page<Item> page = itemService.findItemsByHostAndUriLike(host, uri, offset, limit);
+        Page<Document> page = documentService.findDocumentsByHostAndUriLike(host, uri, offset, limit);
 
         return new ResultList<>(page);
     }
 
-    public ResultList<Item> byUri(String uri) {
+    public ResultList<Document> byUri(String uri) {
         return byUri(uri, 0, Integer.MAX_VALUE);
     }
 

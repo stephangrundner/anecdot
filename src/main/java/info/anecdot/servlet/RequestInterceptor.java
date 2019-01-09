@@ -1,7 +1,7 @@
 package info.anecdot.servlet;
 
-import info.anecdot.model.Item;
-import info.anecdot.model.ItemService;
+import info.anecdot.model.Document;
+import info.anecdot.model.DocumentService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,15 +19,15 @@ public class RequestInterceptor implements HandlerInterceptor {
     private static final Logger LOG = LoggerFactory.getLogger(RequestInterceptor.class);
 
     @Autowired
-    private ItemService itemService;
+    private DocumentService documentService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        Item item = itemService.findItemByRequest(request);
+        Document document = documentService.findDocumentByRequest(request);
 
-        if (item != null) {
+        if (document != null) {
             RequestDispatcher dispatcher = request.getServletContext()
-                    .getRequestDispatcher("/item?id=" + item.getId());
+                    .getRequestDispatcher("/document?id=" + document.getId());
             dispatcher.forward(request, response);
 
             return false;

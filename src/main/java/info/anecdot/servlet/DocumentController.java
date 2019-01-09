@@ -2,8 +2,8 @@ package info.anecdot.servlet;
 
 import info.anecdot.model.Host;
 import info.anecdot.model.HostService;
-import info.anecdot.model.Item;
-import info.anecdot.model.ItemService;
+import info.anecdot.model.Document;
+import info.anecdot.model.DocumentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
@@ -17,37 +17,37 @@ import org.springframework.web.servlet.ModelAndView;
  */
 @Controller
 @RequestMapping
-public class ItemController {
+public class DocumentController {
 
     @Autowired
     private HostService hostService;
 
     @Autowired
-    private ItemService itemService;
+    private DocumentService documentService;
 
     @Autowired
     private ApplicationContext applicationContext;
 
-    @GetMapping(path = "/item")
+    @GetMapping(path = "/document")
     protected ModelAndView page(@RequestParam(name = "id") Long id) {
 
-//        Item item = itemService.findItemByRequest(request);
-        Item item = itemService.findItemById(id);
-        if (item == null) {
+//        Item item = itemService.findDocumentByRequest(request);
+        Document document = documentService.findDocumentById(id);
+        if (document == null) {
             throw new RuntimeException("No item found for id " + id);
         }
 
         ModelAndView modelAndView = new ModelAndView();
-        modelAndView.addAllObjects(itemService.toMap(item));
-        modelAndView.addObject("$item", item);
+        modelAndView.addAllObjects(documentService.toMap(document));
+        modelAndView.addObject("$item", document);
 
-        Host host = item.getHost();
-        String templates = host.getTemplates();
+        Host host = document.getHost();
+        String templates = host.getDirectory().resolve("templates").toString();
         if (!templates.endsWith("/")) {
             templates += "/";
         }
 
-        modelAndView.setViewName("file:" + templates + item.getType());
+        modelAndView.setViewName("file:" + templates + document.getType());
 
         return modelAndView;
     }

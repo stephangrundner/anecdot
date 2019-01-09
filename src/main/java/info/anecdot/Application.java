@@ -31,6 +31,7 @@ import org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver;
 import org.thymeleaf.templatemode.TemplateMode;
 
 import javax.annotation.PostConstruct;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -145,7 +146,7 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 				try {
 					hostService.observe(host);
 				} catch (Exception e) {
-					LOG.error("Error while observing " + host.getDirectory(), e);
+					LOG.error("Error while observing " + host.getDirectory().resolve("content"), e);
 				}
 			});
 		}

@@ -1,44 +1,36 @@
 package info.anecdot.rest;
 
 import info.anecdot.model.Fragment;
-import info.anecdot.model.Item;
-import info.anecdot.model.Payload;
-import info.anecdot.model.Text;
+import info.anecdot.model.Document;
 
 import java.io.IOException;
 
 /**
  * @author Stephan Grundner
  */
-public class ItemSerializer extends AbstractJsonSerializer<Item> {
-
-    private void writePayload(Payload payload) {
-        writeObject(() -> {
-            writeStringField("property", payload.getPropertyPath());
-            if (payload instanceof Text) {
-                writeStringField("value", ((Text) payload).getValue());
-            } else {
-                writeFragment((Fragment) payload);
-            }
-        });
-    }
+public class ItemSerializer extends AbstractJsonSerializer<Document> {
 
     private void writeFragment(Fragment fragment) {
         fragment.getSequences().values().forEach(sequence -> {
             writeArrayField(sequence.getName(), () -> {
-                sequence.getPayloads().forEach(this::writePayload);
+                writeObject(() -> {
+                    writeStringField("property", fragment.getPropertyPath());
+                    writeStringField("text", fragment.getText());
+
+                    sequence.getChildren().forEach(this::writeFragment);
+                });
             });
         });
     }
 
     @Override
-    protected void serialize(Item item) throws IOException {
+    protected void serialize(Document document) throws IOException {
         writeObject(() -> {
-            writeStringField("uri", item.getUri());
-            writeLocalDateTimeField("created", item.getCreated());
-            writeLocalDateTimeField("modified", item.getModified());
+            writeStringField("uri", document.getUri());
+            writeLocalDateTimeField("created", document.getCreated());
+            writeLocalDateTimeField("modified", document.getModified());
 
-            writeFragment(item);
+            writeFragment(document);
         });
     }
 }

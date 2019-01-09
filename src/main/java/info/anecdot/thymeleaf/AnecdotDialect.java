@@ -44,15 +44,15 @@ public class AnecdotDialect extends AbstractProcessorDialect implements IExpress
         return new IExpressionObjectFactory() {
             @Override
             public Set<String> getAllExpressionObjectNames() {
-                return Collections.singleton("items");
+                return Collections.singleton("documents");
             }
 
             @Override
             public Object buildObject(IExpressionContext context, String expressionObjectName) {
-                Items items = applicationContext.getBean(Items.class);
-                items.setContext(context);
+                Documents documents = applicationContext.getBean(Documents.class);
+                documents.setContext(context);
 
-                return items;
+                return documents;
             }
 
             @Override

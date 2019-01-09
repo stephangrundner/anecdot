@@ -20,7 +20,7 @@ public class Sequence extends Identifiable {
 
     @OneToMany(mappedBy = "sequence", cascade = {CascadeType.ALL}, orphanRemoval = true)
     @OrderColumn(name = "ordinal")
-    private final List<Payload> payloads = new ArrayList<>();
+    private final List<Fragment> children = new ArrayList<>();
 
     public Fragment getFragment() {
         return fragment;
@@ -38,19 +38,17 @@ public class Sequence extends Identifiable {
         this.name = name;
     }
 
-    public List<Payload> getPayloads() {
-        return Collections.unmodifiableList(payloads);
+    public List<Fragment> getChildren() {
+        return Collections.unmodifiableList(children);
     }
 
-    public boolean appendPayload(Payload payload) {
-        if (payloads.add(payload)) {
-            payload.setSequence(this);
+    public boolean appendChild(Fragment fragment) {
+        if (children.add(fragment)) {
+            fragment.setSequence(this);
 
             return true;
         }
 
         return false;
     }
-
-    public Sequence() { }
 }

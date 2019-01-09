@@ -1,6 +1,5 @@
 package info.anecdot.model;
 
-import info.anecdot.Crawler;
 import info.anecdot.io.ItemLoader;
 import info.anecdot.io.PathObserver;
 import org.apache.commons.io.FilenameUtils;
@@ -36,7 +35,7 @@ public class HostService {
     private ItemLoader itemLoader;
 
     @Autowired
-    private ItemService itemService;
+    private DocumentService documentService;
 
     @Autowired
     private Environment environment;
@@ -83,7 +82,9 @@ public class HostService {
     }
 
     private String toUri(Host host, Path path) {
-        Path filename = host.getDirectory().relativize(path);
+        Path base = host.getDirectory();
+        Path content = base.resolve("content");
+        Path filename = content.relativize(path);
         String extension = FilenameUtils.getExtension(filename.toString());
         String uri = "/" + org.apache.commons.lang.StringUtils.removeEnd(filename.toString(), "." + extension);
 
@@ -111,23 +112,23 @@ public class HostService {
 
             String uri = toUri(host, file);
 
-            Item item = itemService.findItemByHostAndUri(host, uri);
-            if (item == null) {
-                item = itemLoader.loadPage(file);
-                item.setHost(host);
-                item.setUri(uri);
+            Document document = documentService.findDocumentByHostAndUri(host, uri);
+            if (document == null) {
+                document = itemLoader.loadPage(file);
+                document.setHost(host);
+                document.setUri(uri);
             } else {
                 BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
                 LocalDateTime modified = LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC);
-                if (!modified.isEqual(item.getModified())) {
-                    itemService.deletePage(item);
-                    item = itemLoader.loadPage(file);
-                    item.setHost(host);
-                    item.setUri(uri);
+                if (!modified.isEqual(document.getModified())) {
+                    documentService.deleteDocument(document);
+                    document = itemLoader.loadPage(file);
+                    document.setHost(host);
+                    document.setUri(uri);
                 }
             }
 
-            itemService.savePage(item);
+            documentService.saveDocument(document);
             LOG.info("Reloaded page for file {}", file);
 
             String url = "http://" + host.getName();
@@ -138,7 +139,7 @@ public class HostService {
             url += uri;
 
             try {
-                new Crawler().crawl(url);
+//                new Crawler().crawl(url);
             } catch (Exception e) {
                 LOG.error("Error while crawling {}", url);
             }
@@ -175,7 +176,7 @@ public class HostService {
                 String uri = toUri(host, path);
 
                 if (!file) {
-                    List<Item> items = itemService.findItemsByHostAndUriStartingWith(host, uri);
+                    List<Document> documents = documentService.findDocumentsByHostAndUriStartingWith(host, uri);
 
                     LOG.info("Deleted dir: {}", path);
                 } else {
@@ -184,6 +185,7 @@ public class HostService {
             }
         };
 
-        observer.start(host.getDirectory());
+        Path content = host.getDirectory().resolve("content");
+        observer.start(content);
     }
 }

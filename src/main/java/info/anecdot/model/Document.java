@@ -10,26 +10,20 @@ import java.time.LocalDateTime;
  * @author Stephan Grundner
  */
 @Entity
-@SecondaryTable(name = "item",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
-@DiscriminatorValue("item")
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
+//@SecondaryTable(name = "document",
+//        uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
+//@DiscriminatorValue("document")
 @JsonSerialize(using = ItemSerializer.class)
-public class Item extends Fragment {
+public class Document extends Fragment {
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "host_id", table = "item")
+    @JoinColumn(name = "host_id")
     private Host host;
 
-    @Column(table = "item")
     private String uri;
-
-    @Column(table = "item")
     private String type;
-
-    @Column(table = "item")
     private LocalDateTime created;
-
-    @Column(table = "item")
     private LocalDateTime modified;
 
     public Host getHost() {

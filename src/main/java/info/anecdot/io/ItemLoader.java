@@ -1,11 +1,8 @@
 package info.anecdot.io;
 
 import info.anecdot.model.Fragment;
-import info.anecdot.model.Item;
-import info.anecdot.model.Payload;
-import info.anecdot.model.Text;
+import info.anecdot.model.Document;
 import org.springframework.stereotype.Component;
-import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -36,55 +33,37 @@ public class ItemLoader {
                 continue;
             }
 
-            Payload payload = fromNode(child);
-            fragment.appendPayload(child.getNodeName(), payload);
+            Fragment payload = fromNode(child);
+            fragment.appendChild(child.getNodeName(), payload);
         }
+
+        fragment.setText(node.getTextContent());
     }
 
-    private boolean hasChildElements(Node node) {
-        NodeList children = node.getChildNodes();
-        if (children.getLength() == 0) {
-            return false;
-        }
-
-        for (int i = 0; i < children.getLength(); i++) {
-            Node child = children.item(i);
-            if (child.getNodeType() == Node.ELEMENT_NODE) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private Payload fromNode(Node node) {
+    private Fragment fromNode(Node node) {
         if (node.getNodeType() == Node.DOCUMENT_NODE) {
-            Element document = ((Document) node).getDocumentElement();
-            Item item = new Item();
+            Element document = ((org.w3c.dom.Document) node).getDocumentElement();
+            Document item = new Document();
             item.setType(document.getNodeName());
             toFragment(document, item);
 
             return item;
-        } else if (hasChildElements(node)) {
+
+        } else {
             Fragment fragment = new Fragment();
             toFragment(node, fragment);
 
             return fragment;
-        } else {
-            Text text = new Text();
-            text.setValue(node.getTextContent());
-
-            return text;
         }
     }
 
-    public Item loadPage(Path file) throws IOException {
+    public Document loadPage(Path file) throws IOException {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         try (InputStream inputStream = Files.newInputStream(file)) {
             DocumentBuilder db = dbf.newDocumentBuilder();
-            Document document = db.parse(inputStream);
+            org.w3c.dom.Document document = db.parse(inputStream);
 
-            Item item = (Item) fromNode(document);
+            Document item = (Document) fromNode(document);
 
             BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
             item.setCreated(LocalDateTime.ofInstant(attributes.creationTime().toInstant(), ZoneOffset.UTC));
