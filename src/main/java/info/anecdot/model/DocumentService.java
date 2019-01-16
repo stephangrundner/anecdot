@@ -1,6 +1,9 @@
 package info.anecdot.model;
 
 import org.apache.commons.collections4.map.AbstractMapDecorator;
+import org.apache.commons.collections4.map.LazyMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -15,6 +18,8 @@ import java.util.*;
  */
 @Service
 public class DocumentService extends FragmentService {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DocumentService.class);
 
     private UrlPathHelper pathHelper;
 
@@ -72,21 +77,38 @@ public class DocumentService extends FragmentService {
         documentRepository.delete(document);
     }
 
+    private <K> Map<K, Object> createMap(){
+        return LazyMap.lazyMap(new LinkedHashMap<K, Object>() {
+            @Override
+            public boolean containsKey(Object key) {
+                return true;
+            }
+        }, this::createMap);
+    }
+
     public Map<String, Object> toMap(Fragment fragment, Map<String, Object> parentMap, int index) {
-        Map<String, Object> map = new LinkedHashMap<>();
+//        Map<String, Object> map = new LinkedHashMap<>();
+        Map<String, Object> map = createMap();
 
         map.put("$index", index);
         map.put("$ordinal", Optional.ofNullable(fragment.getSequence()).map(Sequence::getOrdinal).orElse(0));
         map.put("$property", fragment.getPropertyPath());
-        map.put("$text", fragment.getText());
+        map.put("$value", fragment.getText());
+        map.put("$text", new Object() {
+            @Override
+            public String toString() {
+                LOG.warn("Dont use the $text property!");
+                return (String) map.get("$value");
+            }
+        });
         map.put("$attributes", fragment.getAttributes());
         map.put("$fragment", fragment);
 
         List<Object> children = new ArrayList<>();
 
         for (Sequence sequence : fragment.getSequences()) {
-            String name = sequence.getName();
-            Map<Object, Object> values = new LinkedHashMap<>();
+//            Map<Object, Object> values = new LinkedHashMap<>();
+            Map<Object, Object> values = createMap();
             int i = 0;
             for (Fragment child : sequence.getChildren()) {
                 Map<String, Object> childMap = toMap(child, map, i);
@@ -107,6 +129,7 @@ public class DocumentService extends FragmentService {
                 return decorated.getClass().getName() + '@' + System.identityHashCode(decorated);
             }
         });
+
         map.put("$children", children);
 
         return map;

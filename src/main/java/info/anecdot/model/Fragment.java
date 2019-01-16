@@ -97,6 +97,17 @@ public class Fragment extends Identifiable {
         return null;
     }
 
+    public Fragment getRoot() {
+        Fragment fragment = this;
+        while (true) {
+            Fragment parent = fragment.getParent();
+            if (parent == null) {
+                return fragment;
+            }
+            fragment = fragment.getParent();
+        }
+    }
+
     public String getPropertyPath() {
         LinkedList<String> segments = new LinkedList<>();
 
