@@ -6,7 +6,10 @@ import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -19,6 +22,9 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stephan Grundner
@@ -38,7 +44,12 @@ public class HostService {
     private DocumentService documentService;
 
     @Autowired
+    private ApplicationContext applicationContext;
+
+    @Autowired
     private Environment environment;
+
+    private Map<String, Properties> propertiesByHostKey = new ConcurrentHashMap<>();
 
     public String resolveHostName(HttpServletRequest request) {
         String hostName = Collections.list(request.getHeaderNames()).stream()
@@ -72,9 +83,8 @@ public class HostService {
     }
 
     private String toUri(Host host, Path path) {
-        Path base = host.getDirectory();
-        Path content = base.resolve("content");
-        Path filename = content.relativize(path);
+        Path directory = host.getDirectory();
+        Path filename = directory.relativize(path);
         String extension = FilenameUtils.getExtension(filename.toString());
         String uri = "/" + org.apache.commons.lang.StringUtils.removeEnd(filename.toString(), "." + extension);
 
@@ -93,7 +103,7 @@ public class HostService {
         }
     }
 
-    private void reload(Host host, Path file) {
+    private void reload(Host host, Path file, boolean force) {
         try {
             if (!accept(file)) {
                 LOG.info("Ignoring {}", file);
@@ -110,7 +120,7 @@ public class HostService {
             } else {
                 BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
                 LocalDateTime modified = LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC);
-                if (!modified.isEqual(document.getModified())) {
+                if (force || !modified.isEqual(document.getModified())) {
                     documentService.deleteDocument(document);
                     document = itemLoader.loadPage(file);
                     document.setHost(host);
@@ -121,22 +131,36 @@ public class HostService {
             documentService.saveDocument(document);
             LOG.info("Reloaded page for file {}", file);
 
-            String url = "http://" + host.getName();
-            if (url.endsWith("/")) {
-                url = url.substring(0, url.length() - 1);
-            }
-
-            url += uri;
-
-            try {
-//                new Crawler().crawl(url);
-            } catch (Exception e) {
-                LOG.error("Error while crawling {}", url);
-            }
-
-        } catch (Exception e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private void reload(Host host, Path file) {
+        reload(host, file, false);
+    }
+
+    public void reloadProperties(Host host) throws IOException {
+        Path directory = host.getDirectory();
+        Path propertiesFile = directory.resolve(".properties");
+        if (Files.exists(propertiesFile)) {
+            Resource resource = applicationContext.getResource("file:" + propertiesFile.toRealPath());
+            Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+
+            properties.forEach((k, v) -> {
+                host.getProperties().put(k.toString(), v.toString());
+            });
+
+//            saveHost(host);
+        }
+    }
+
+    private void reload(Host host) throws IOException {
+        reloadProperties(host);
+        saveHost(host);
+        Files.walk(host.getDirectory())
+                .forEach(file ->
+                        reload(host, file, true));
     }
 
     public void observe(Host host) throws IOException {
@@ -153,6 +177,16 @@ public class HostService {
 
             @Override
             protected void modified(Path file) {
+
+                if (".properties".equals(file.getFileName().toString())) {
+                    try {
+                        reload(host);
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                    return;
+                }
+
                 visited(file);
             }
 
@@ -175,7 +209,6 @@ public class HostService {
             }
         };
 
-        Path content = host.getDirectory().resolve("content");
-        observer.start(content);
+        observer.start(host.getDirectory());
     }
 }

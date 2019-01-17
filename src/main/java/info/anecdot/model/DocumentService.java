@@ -87,11 +87,11 @@ public class DocumentService extends FragmentService {
     }
 
     public Map<String, Object> toMap(Fragment fragment, Map<String, Object> parentMap, int index) {
-//        Map<String, Object> map = new LinkedHashMap<>();
         Map<String, Object> map = createMap();
 
         map.put("$index", index);
         map.put("$ordinal", Optional.ofNullable(fragment.getSequence()).map(Sequence::getOrdinal).orElse(0));
+        map.put("$name", Optional.ofNullable(fragment.getSequence()).map(Sequence::getName).orElse(null));
         map.put("$property", fragment.getPropertyPath());
         map.put("$value", fragment.getText());
         map.put("$text", new Object() {
@@ -107,7 +107,6 @@ public class DocumentService extends FragmentService {
         List<Object> children = new ArrayList<>();
 
         for (Sequence sequence : fragment.getSequences()) {
-//            Map<Object, Object> values = new LinkedHashMap<>();
             Map<Object, Object> values = createMap();
             int i = 0;
             for (Fragment child : sequence.getChildren()) {

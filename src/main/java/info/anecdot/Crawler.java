@@ -14,6 +14,7 @@ import java.net.MalformedURLException;
 /**
  * @author Stephan Grundner
  */
+@Deprecated
 public class Crawler {
 
     private static final Logger LOG = LoggerFactory.getLogger(Crawler.class);

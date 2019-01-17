@@ -51,6 +51,11 @@ public class PathObserver {
     protected void overflow(WatchKey key, WatchEvent<?> event) { }
     protected void error(WatchKey key, WatchEvent<?> event, Exception e) { }
 
+    public void stop() throws IOException {
+        watchService.close();
+        keys.clear();
+    }
+
     public void start(Path directory) {
         observe(directory);
 
@@ -119,6 +124,8 @@ public class PathObserver {
 
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
+        } catch (ClosedWatchServiceException e) {
+            LOG.info("Stopped observing {}", directory);
         }
     }
 

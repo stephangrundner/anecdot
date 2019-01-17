@@ -1,4 +1,4 @@
-package info.anecdot.util;
+package info.anecdot.config;
 
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.convert.ConversionService;

@@ -45,7 +45,8 @@ public class DocumentController {
         modelAndView.addObject("$hostName", hostName);
 
         Host host = document.getHost();
-        String templates = host.getDirectory().resolve("templates").toString();
+//        String templates = host.getDirectory().resolve("templates").toString();
+        String templates = host.getDirectory().toString();
         if (!templates.endsWith("/")) {
             templates += "/";
         }
