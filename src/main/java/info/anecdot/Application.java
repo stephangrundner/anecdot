@@ -1,11 +1,11 @@
 package info.anecdot;
 
-import info.anecdot.config.PropertiesFileInitializer;
-import info.anecdot.model.Host;
-import info.anecdot.model.HostService;
-import info.anecdot.servlet.RequestInterceptor;
-import info.anecdot.servlet.ResourceResolverDispatcher;
+import com.mitchellbosecke.pebble.loader.FileLoader;
+import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.config.PropertyResolverUtils;
+import info.anecdot.model.Site;
+import info.anecdot.model.SiteService;
+import info.anecdot.servlet.*;
 import org.apache.catalina.connector.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,7 +13,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.Banner;
+import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -28,26 +30,9 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.thymeleaf.IEngineConfiguration;
-import org.thymeleaf.expression.ExpressionObjects;
-import org.thymeleaf.spring5.SpringTemplateEngine;
-import org.thymeleaf.spring5.context.SpringContextUtils;
-import org.thymeleaf.spring5.dialect.SpringStandardDialect;
-import org.thymeleaf.spring5.expression.SpringStandardExpressionObjectFactory;
-import org.thymeleaf.spring5.templateresolver.SpringResourceTemplateResolver;
-import org.thymeleaf.standard.expression.IStandardExpressionParser;
-import org.thymeleaf.standard.expression.StandardExpressionExecutionContext;
-import org.thymeleaf.standard.expression.StandardExpressionObjectFactory;
-import org.thymeleaf.standard.expression.StandardExpressions;
-import org.thymeleaf.templatemode.TemplateMode;
-import org.thymeleaf.templateresolver.ITemplateResolver;
-import org.thymeleaf.templateresolver.TemplateResolution;
 
-import javax.annotation.PostConstruct;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -68,11 +53,11 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 	@Autowired
 	private ApplicationContext applicationContext;
 
-	@Autowired
-	private SpringTemplateEngine templateEngine;
+//	@Autowired
+//	private SpringTemplateEngine templateEngine;
 
 	@Autowired
-	private HostService hostService;
+	private SiteService siteService;
 
 	@Bean
 	@Scope("prototype")
@@ -94,11 +79,27 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 		return new RequestInterceptor();
 	}
 
+	@Bean
+	protected ThumborRequestInterceptor thumborRequestInterceptor() {
+		return new ThumborRequestInterceptor();
+	}
+
+	@Bean
+	@ConditionalOnMissingBean
+	protected Thumbor thumborRunner() {
+		return new Thumbor();
+	}
+
 	@Override
 	public void addInterceptors(InterceptorRegistry registry) {
 		RequestInterceptor requestInterceptor =
 				applicationContext.getBean(RequestInterceptor.class);
 		registry.addInterceptor(requestInterceptor).order(0);
+
+		ThumborRequestInterceptor thumborRequestInterceptor =
+				applicationContext.getBean(ThumborRequestInterceptor.class);
+		registry.addInterceptor(thumborRequestInterceptor)
+				.order(1);
 	}
 
 	@Bean
@@ -111,76 +112,51 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 		ResourceResolverDispatcher resourceResolverDispatcher =
 				applicationContext.getBean(ResourceResolverDispatcher.class);
 
+		Environment environment = applicationContext.getEnvironment();
+		String themeDirectory = environment.getProperty("anecdot.theme-directory", "/theme");
+		registry.addResourceHandler("/**").addResourceLocations("file:" + themeDirectory);
+
 		registry.addResourceHandler("/**")
 				.resourceChain(false)
 				.addResolver(resourceResolverDispatcher);
 	}
 
-	@PostConstruct
-	private void customizeTemplateEngine() {
-//		SpringResourceTemplateResolver templateResolver = new SpringResourceTemplateResolver();
-		ITemplateResolver templateResolver = new ITemplateResolver() {
-			@Override
-			public String getName() {
-				return null;
-			}
-
-			@Override
-			public Integer getOrder() {
-				return null;
-			}
-
-			@Override
-			public TemplateResolution resolveTemplate(IEngineConfiguration configuration, String ownerTemplate, String template, Map<String, Object> templateResolutionAttributes) {
-				IStandardExpressionParser expressionParser = StandardExpressions.getExpressionParser(configuration);
-				Set<String> x = configuration.getExpressionObjectFactory().getAllExpressionObjectNames();
-//				ExpressionObjects.
-//				expressionParser.parseExpression(StandardExpressionExecutionContext.NORMAL.withTypeConversion(), "");
-//				SpringContextUtils.getRequestContext(configuration);
-				return null;
-			}
-		};
-//		templateResolver.setApplicationContext(applicationContext);
-//		templateResolver.setCheckExistence(true);
-//		templateResolver.setSuffix(".html");
-//		templateResolver.setTemplateMode(TemplateMode.HTML);
-//		templateResolver.setCacheable(false);
-
-		templateEngine.addTemplateResolver(templateResolver);
+	@Bean
+	public Loader<?> pebbleLoader() {
+		return new PebbleLoaderDecorator(new FileLoader());
 	}
 
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
 		Environment environment = applicationContext.getEnvironment();
-		List<String> keys = PropertyResolverUtils.getProperties(environment, "anecdot.hosts");
+		List<String> keys = PropertyResolverUtils.getProperties(environment, "anecdot.sites");
 		for (String key : keys) {
-			Host host = new Host();
-			String prefix = String.format("anecdot.host.%s", key);
+			Site site = new Site();
+			String prefix = String.format("anecdot.site.%s", key);
 
-			List<String> names = PropertyResolverUtils.getProperties(environment, prefix + ".names");
-			host.getNames().addAll(names);
+			List<String> names = PropertyResolverUtils.getProperties(environment, prefix + ".hosts");
+			site.getHosts().addAll(names);
 
-			String directory = environment.getProperty(prefix + ".directory");
-			host.setDirectory(Paths.get(directory));
+			String content = environment.getProperty(prefix + ".content");
+			site.setContent(Paths.get(content));
 
-			host.setHome(environment.getProperty(prefix + ".home", "/index"));
+			String theme = environment.getProperty(prefix + ".theme");
+			site.setTheme(Paths.get(theme));
 
-//			List<String> hidden = PropertyResolverUtils.getProperties(environment, prefix + ".hidden");
-//			host.getHidden().addAll(hidden);
+			site.setHome(environment.getProperty(prefix + ".home", "/index"));
 
-			hostService.reloadProperties(host);
-
-			hostService.saveHost(host);
+			siteService.reloadProperties(site);
+			siteService.saveSite(site);
 		}
 
 		ExecutorService executorService = Executors.newCachedThreadPool();
 
-		for (Host host : hostService.findAllHosts()) {
+		for (Site site : siteService.findAllHosts()) {
 			executorService.submit(() -> {
 				try {
-					hostService.observe(host);
+					siteService.observe(site);
 				} catch (Exception e) {
-					LOG.error("Error while observing " + host.getDirectory().resolve("content"), e);
+					LOG.error("Error while observing " + site.getContent(), e);
 				}
 			});
 		}
@@ -190,6 +166,8 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 		new SpringApplicationBuilder(Application.class)
 //				.initializers(new PropertiesFileInitializer())
 				.bannerMode(Banner.Mode.OFF)
+				.web(WebApplicationType.SERVLET)
+				.headless(true)
 				.run(args);
 	}
 }

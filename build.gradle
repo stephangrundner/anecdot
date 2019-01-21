@@ -34,7 +34,8 @@ def mysqlVersion = '5.1.39'
 dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-web')
 	implementation('org.springframework.boot:spring-boot-starter-data-jpa')
-	implementation('org.springframework.boot:spring-boot-starter-thymeleaf')
+//	implementation('org.springframework.boot:spring-boot-starter-thymeleaf')
+	implementation('io.pebbletemplates:pebble-spring-boot-2-starter:3.0.7')
 
 //	compile group: 'org.thymeleaf', name: 'thymeleaf', version: '3.0.7.RELEASE'
 //	compile group: 'org.thymeleaf', name: 'thymeleaf-spring4', version: '3.0.7.RELEASE'

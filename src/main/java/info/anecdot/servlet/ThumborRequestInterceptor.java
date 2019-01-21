@@ -1,4 +1,4 @@
-package info.anecdot.thumbor;
+package info.anecdot.servlet;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.servlet.HandlerInterceptor;
@@ -11,10 +11,8 @@ import javax.servlet.http.HttpServletResponse;
  */
 public class ThumborRequestInterceptor implements HandlerInterceptor {
 
-    public static final int ORDINAL = 1000;
-
     @Autowired
-    private ThumborRunner thumborRunner;
+    private Thumbor thumbor;
 
     private boolean isThumborRequest(HttpServletRequest request) {
         return request.getParameter("size") != null;
@@ -23,7 +21,7 @@ public class ThumborRequestInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (isThumborRequest(request)) {
-            thumborRunner.process(request, response);
+            thumbor.process(request, response);
 
             return false;
         }

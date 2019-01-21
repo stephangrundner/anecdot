@@ -1,5 +1,7 @@
 package info.anecdot.model;
 
+import info.anecdot.io.PathConverter;
+
 import javax.persistence.*;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -12,27 +14,34 @@ import java.util.Set;
  * @author Stephan Grundner
  */
 @Entity
-public class Host extends Identifiable {
+public class Site {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    public Long getId() {
+        return id;
+    }
 
     @Convert(converter = PathConverter.class)
     @Column(unique = true)
-    private Path directory;
+    private Path content;
 
-    @Deprecated
-    @Column
-    private String name;
+    @Convert(converter = PathConverter.class)
+    private Path theme;
 
     @ElementCollection
-    @CollectionTable(name = "host_name",
+    @CollectionTable(name = "site_host",
             joinColumns = @JoinColumn(name = "host_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "value"}))
-    @Column(name = "value")
-    private final Set<String> names = new LinkedHashSet<>();
+            uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "name"}))
+    @Column(name = "name")
+    private final Set<String> hosts = new LinkedHashSet<>();
 
     private String home;
 
     @ElementCollection
-    @CollectionTable(name = "hidden_path",
+    @CollectionTable(name = "hidden_file",
             joinColumns = @JoinColumn(name = "host_id"),
             uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "pattern"}))
     @Column(name = "pattern")
@@ -48,26 +57,24 @@ public class Host extends Identifiable {
 
     private LocalDateTime lastModified;
 
-    public Path getDirectory() {
-        return directory;
+    public Path getContent() {
+        return content;
     }
 
-    public void setDirectory(Path directory) {
-        this.directory = directory;
+    public void setContent(Path content) {
+        this.content = content;
     }
 
-    @Deprecated
-    public String getName() {
-        return name;
+    public Path getTheme() {
+        return theme;
     }
 
-    @Deprecated
-    public void setName(String name) {
-        this.name = name;
+    public void setTheme(Path theme) {
+        this.theme = theme;
     }
 
-    public Set<String> getNames() {
-        return names;
+    public Set<String> getHosts() {
+        return hosts;
     }
 
     public String getHome() {

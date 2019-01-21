@@ -1,4 +1,4 @@
-package info.anecdot.thumbor;
+package info.anecdot.servlet;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -22,9 +22,9 @@ import java.util.List;
  * https://thumbor.readthedocs.io/en/latest/image_loader.html
  * https://thumbor.readthedocs.io/en/latest/configuration.html
  */
-public class ThumborRunner implements ApplicationRunner {
+public class Thumbor implements ApplicationRunner {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ThumborRunner.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Thumbor.class);
 
     private static boolean instantiated = false;
     {

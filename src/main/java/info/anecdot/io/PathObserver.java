@@ -45,10 +45,10 @@ public class PathObserver {
         }
     }
 
-    protected void created(Path file) { }
-    protected void modified(Path file) { }
-    protected void deleted(Path path, boolean file) { }
-    protected void overflow(WatchKey key, WatchEvent<?> event) { }
+    protected void created(Path file) throws Exception { }
+    protected void modified(Path file) throws Exception { }
+    protected void deleted(Path path, boolean file) throws Exception { }
+    protected void overflow(WatchKey key, WatchEvent<?> event) throws Exception { }
     protected void error(WatchKey key, WatchEvent<?> event, Exception e) { }
 
     public void stop() throws IOException {
@@ -115,7 +115,11 @@ public class PathObserver {
                         }
 
                     } catch (Exception e) {
-                        error(key, event, e);
+                        try {
+                            error(key, event, e);
+                        } catch (Exception uncaught) {
+                            LOG.error("Uncaught exception", uncaught);
+                        }
                     } finally {
                         key.reset();
                     }

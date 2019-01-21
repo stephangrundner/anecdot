@@ -1,68 +1,90 @@
 package info.anecdot.model;
 
 import javax.persistence.*;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author Stephan Grundner
  */
 @Entity
 @Inheritance(strategy = InheritanceType.JOINED)
-public class Fragment extends Identifiable {
+public class Fragment {
 
-    @OneToMany(mappedBy = "fragment", cascade = {CascadeType.ALL}, orphanRemoval = true)
-    @MapKey(name = "name")
-    @OrderBy("ordinal ASC")
-    private Set<Sequence> sequences = new LinkedHashSet<>();
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    public Long getId() {
+        return id;
+    }
+
+    @ManyToOne
+    private Fragment parent;
+
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinTable(name = "first_child",
+            joinColumns = @JoinColumn(name = "fragment_id"),
+            inverseJoinColumns = @JoinColumn(name = "first_id"))
+    @MapKeyColumn(name = "name")
+    private final Map<String, Fragment> children = new LinkedHashMap<>();
+
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    private Fragment next;
 
     @Lob
     @Column(name = "[text]")
     private String text;
 
-    @ManyToOne
-    private Sequence sequence;
-    private int ordinal;
-
-    @Access(AccessType.PROPERTY)
-    private String propertyPath;
-
     @ElementCollection
-    @CollectionTable(name = "fragment_attribute")
+    @CollectionTable(name = "adfvsdfv")
     @MapKeyColumn(name = "name")
     @Column(name = "value")
     private final Map<String, String> attributes = new LinkedHashMap<>();
 
-    public Set<Sequence> getSequences() {
-        return Collections.unmodifiableSet(sequences);
+    public Fragment getParent() {
+        return parent;
     }
 
-    public Sequence getSequence(String name) {
-        Collection<Sequence> found = sequences.stream()
-                .filter(it -> it.getName().equals(name))
-                .collect(Collectors.toSet());
-
-        if (!found.isEmpty()) {
-            if (found.size() > 1) {
-                throw new IllegalStateException();
-            }
-            return found.iterator().next();
-        }
-
-        return null;
+    private void setParent(Fragment parent) {
+        this.parent = parent;
     }
 
-    public boolean appendChild(String name, Fragment payload) {
-        Sequence sequence = getSequence(name);
-        if (sequence == null) {
-            sequence = new Sequence();
-            sequence.setName(name);
-            sequence.setFragment(this);
-            sequence.setOrdinal(sequences.size());
-            sequences.add(sequence);
+    public Map<String, Fragment> getChildren() {
+        return Collections.unmodifiableMap(children);
+    }
+
+    public Fragment getNext() {
+        return next;
+    }
+
+    private void setNext(Fragment next) {
+        this.next = next;
+    }
+
+    public boolean isLast() {
+        return getNext() == null;
+    }
+
+    public Fragment getLast() {
+        Fragment fragment = this;
+        while (!fragment.isLast()) {
+            fragment = fragment.getNext();
         }
 
-        return sequence.appendChild(payload);
+        return fragment;
+    }
+
+    public void appendChild(String name, Fragment fragment) {
+        Fragment first = children.get(name);
+        if (first == null) {
+            children.put(name, fragment);
+        } else {
+            Fragment last = first.getLast();
+            last.setNext(fragment);
+            fragment.setParent(this);
+        }
     }
 
     public String getText() {
@@ -71,30 +93,6 @@ public class Fragment extends Identifiable {
 
     public void setText(String text) {
         this.text = text;
-    }
-
-    public Sequence getSequence() {
-        return sequence;
-    }
-
-    void setSequence(Sequence sequence) {
-        this.sequence = sequence;
-    }
-
-    public int getOrdinal() {
-        return ordinal;
-    }
-
-    public void setOrdinal(int ordinal) {
-        this.ordinal = ordinal;
-    }
-
-    public Fragment getParent() {
-        if (sequence != null) {
-            return sequence.getFragment();
-        }
-
-        return null;
     }
 
     public Fragment getRoot() {
@@ -108,27 +106,39 @@ public class Fragment extends Identifiable {
         }
     }
 
-    public String getPropertyPath() {
-        LinkedList<String> segments = new LinkedList<>();
+//    public String getPropertyPath() {
+//        LinkedList<String> segments = new LinkedList<>();
+//
+//        Fragment fragment = this;
+//        do {
+//            if (fragment instanceof Document)
+//                break;
+//
+//            segments.addFirst(String.format("%s[%d]",
+//                    fragment.getName(),
+//                    fragment.getOrdinal()));
+//
+//            fragment = fragment.getParent();
+//        } while (fragment != null);
+//
+//        return segments.stream().collect(Collectors.joining("."));
+//    }
 
-        Fragment payload = this;
-        do {
-            if (payload instanceof Document)
-                break;
+//    public void setPropertyPath(String propertyPath) {
+//        this.propertyPath = propertyPath;
+//    }
 
-            segments.addFirst(String.format("%s[%d]",
-                    payload.sequence.getName(),
-                    payload.getOrdinal()));
-
-            payload = payload.getParent();
-        } while (payload != null);
-
-        return segments.stream().collect(Collectors.joining("."));
-    }
-
-    public void setPropertyPath(String propertyPath) {
-        this.propertyPath = propertyPath;
-    }
+//    public String getName() {
+//        Fragment parent = getParent();
+//        if (parent != null) {
+//            return parent.getChildren().entrySet().stream()
+//                    .filter(it -> it.getValue().equals(this))
+//                    .map(Map.Entry::getKey)
+//                    .findFirst().orElse(null);
+//        }
+//
+//        return null;
+//    }
 
     public Map<String, String> getAttributes() {
         return attributes;

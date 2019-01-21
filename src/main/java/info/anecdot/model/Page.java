@@ -1,8 +1,5 @@
 package info.anecdot.model;
 
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import info.anecdot.rest.ItemSerializer;
-
 import javax.persistence.*;
 import java.time.LocalDateTime;
 
@@ -10,28 +7,27 @@ import java.time.LocalDateTime;
  * @author Stephan Grundner
  */
 @Entity
-@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "uri"}))
 //@SecondaryTable(name = "document",
 //        uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
 //@DiscriminatorValue("document")
-@JsonSerialize(using = ItemSerializer.class)
-public class Document extends Fragment {
+public class Page extends Fragment {
 
     @ManyToOne(optional = false)
-    @JoinColumn(name = "host_id")
-    private Host host;
+    @JoinColumn(name = "site_id")
+    private Site site;
 
     private String uri;
     private String type;
     private LocalDateTime created;
     private LocalDateTime modified;
 
-    public Host getHost() {
-        return host;
+    public Site getSite() {
+        return site;
     }
 
-    public void setHost(Host host) {
-        this.host = host;
+    public void setSite(Site site) {
+        this.site = site;
     }
 
     public String getUri() {

@@ -1,6 +1,6 @@
 package info.anecdot.model;
 
-import info.anecdot.io.ItemLoader;
+import info.anecdot.io.PageLoader;
 import info.anecdot.io.PathObserver;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
@@ -17,6 +17,7 @@ import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
@@ -30,18 +31,18 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author Stephan Grundner
  */
 @Service
-public class HostService {
+public class SiteService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HostService.class);
-
-    @Autowired
-    private HostRepository hostRepository;
+    private static final Logger LOG = LoggerFactory.getLogger(SiteService.class);
 
     @Autowired
-    private ItemLoader itemLoader;
+    private SiteRepository siteRepository;
 
     @Autowired
-    private DocumentService documentService;
+    private PageLoader pageLoader;
+
+    @Autowired
+    private PageService pageService;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -69,21 +70,21 @@ public class HostService {
         return hostName;
     }
 
-    public List<Host> findAllHosts() {
-        return hostRepository.findAll();
+    public List<Site> findAllHosts() {
+        return siteRepository.findAll();
     }
 
-    public Host findHostByRequest(HttpServletRequest request) {
+    public Site findSiteByRequest(HttpServletRequest request) {
         String name = resolveHostName(request);
-        return hostRepository.findByNamesContaining(name);
+        return siteRepository.findByHostsContaining(name);
     }
 
-    public void saveHost(Host host) {
-        hostRepository.saveAndFlush(host);
+    public void saveSite(Site site) {
+        siteRepository.saveAndFlush(site);
     }
 
-    private String toUri(Host host, Path path) {
-        Path directory = host.getDirectory();
+    private String toUri(Site site, Path path) {
+        Path directory = site.getContent();
         Path filename = directory.relativize(path);
         String extension = FilenameUtils.getExtension(filename.toString());
         String uri = "/" + org.apache.commons.lang.StringUtils.removeEnd(filename.toString(), "." + extension);
@@ -103,32 +104,32 @@ public class HostService {
         }
     }
 
-    private void reload(Host host, Path file, boolean force) {
+    private void reload(Site site, Path file, boolean force) {
         try {
             if (!accept(file)) {
                 LOG.info("Ignoring {}", file);
                 return;
             }
 
-            String uri = toUri(host, file);
+            String uri = toUri(site, file);
 
-            Document document = documentService.findDocumentByHostAndUri(host, uri);
-            if (document == null) {
-                document = itemLoader.loadPage(file);
-                document.setHost(host);
-                document.setUri(uri);
+            Page page = pageService.findPageByHostAndUri(site, uri);
+            if (page == null) {
+                page = pageLoader.loadPage(file);
+                page.setSite(site);
+                page.setUri(uri);
             } else {
                 BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
                 LocalDateTime modified = LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC);
-                if (force || !modified.isEqual(document.getModified())) {
-                    documentService.deleteDocument(document);
-                    document = itemLoader.loadPage(file);
-                    document.setHost(host);
-                    document.setUri(uri);
+                if (force || !modified.isEqual(page.getModified())) {
+                    pageService.deletePage(page);
+                    page = pageLoader.loadPage(file);
+                    page.setSite(site);
+                    page.setUri(uri);
                 }
             }
 
-            documentService.saveDocument(document);
+            pageService.savePage(page);
             LOG.info("Reloaded page for file {}", file);
 
         } catch (IOException e) {
@@ -136,38 +137,43 @@ public class HostService {
         }
     }
 
-    private void reload(Host host, Path file) {
-        reload(host, file, false);
+    private void reload(Site site, Path file) {
+        reload(site, file, false);
     }
 
-    public void reloadProperties(Host host) throws IOException {
-        Path directory = host.getDirectory();
+    public void reloadProperties(Site site) throws IOException {
+        Path directory = site.getContent();
         Path propertiesFile = directory.resolve(".properties");
         if (Files.exists(propertiesFile)) {
             Resource resource = applicationContext.getResource("file:" + propertiesFile.toRealPath());
             Properties properties = PropertiesLoaderUtils.loadProperties(resource);
 
+            if (properties.containsKey("theme")) {
+                Path theme = Paths.get(properties.getProperty("theme"));
+                site.setTheme(theme);
+            }
+
             properties.forEach((k, v) -> {
-                host.getProperties().put(k.toString(), v.toString());
+                site.getProperties().put(k.toString(), v.toString());
             });
 
-//            saveHost(host);
+            saveSite(site);
         }
     }
 
-    private void reload(Host host) throws IOException {
-        reloadProperties(host);
-        saveHost(host);
-        Files.walk(host.getDirectory())
+    private void reload(Site site) throws IOException {
+        reloadProperties(site);
+        saveSite(site);
+        Files.walk(site.getContent())
                 .forEach(file ->
-                        reload(host, file, true));
+                        reload(site, file, true));
     }
 
-    public void observe(Host host) throws IOException {
+    public void observe(Site site) throws IOException {
         PathObserver observer = new PathObserver() {
             @Override
             protected void visited(Path file) {
-                reload(host, file);
+                reload(site, file);
             }
 
             @Override
@@ -180,7 +186,7 @@ public class HostService {
 
                 if (".properties".equals(file.getFileName().toString())) {
                     try {
-                        reload(host);
+                        reload(site);
                     } catch (Exception e) {
                         throw new RuntimeException(e);
                     }
@@ -197,10 +203,10 @@ public class HostService {
                     return;
                 }
 
-                String uri = toUri(host, path);
+                String uri = toUri(site, path);
 
                 if (!file) {
-                    List<Document> documents = documentService.findDocumentsByHostAndUriStartingWith(host, uri);
+                    List<Page> pages = pageService.findPagesByHostAndUriStartingWith(site, uri);
 
                     LOG.info("Deleted dir: {}", path);
                 } else {
@@ -209,6 +215,6 @@ public class HostService {
             }
         };
 
-        observer.start(host.getDirectory());
+        observer.start(site.getContent());
     }
 }
