@@ -140,7 +140,7 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
 			String theme = environment.getProperty(prefix + ".theme");
 			site.setTheme(Paths.get(theme));
 
-			site.setHome(environment.getProperty(prefix + ".home", "/index"));
+			site.setHome(environment.getProperty(prefix + ".home", "/home"));
 
 			siteService.reloadProperties(site);
 			siteService.saveSite(site);

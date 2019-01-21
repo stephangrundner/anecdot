@@ -16,23 +16,23 @@ import java.util.stream.Collectors;
  */
 public final class PropertyResolverUtils {
 
-    public static <T> List<T> getProperties(PropertyResolver propertyResolver, ConversionService conversionService, String key, Class<T> targetElementType) {
-        class StringArrayList extends ArrayList<T> {
-            public StringArrayList() { }
-        }
+//    private static <T> List<T> getProperties(PropertyResolver propertyResolver, ConversionService conversionService, String key, Class<T> targetElementType) {
+//        class StringArrayList extends ArrayList<T> {
+//            public StringArrayList() { }
+//        }
+//
+//        return propertyResolver.getProperty(key, StringArrayList.class).stream()
+//                .map(it -> conversionService.convert(it, targetElementType))
+//                .collect(Collectors.toList());
+//    }
 
-        return propertyResolver.getProperty(key, StringArrayList.class).stream()
-                .map(it -> conversionService.convert(it, targetElementType))
-                .collect(Collectors.toList());
-    }
+//    public static <T> List<T> getProperties(ApplicationContext applicationContext, String key, Class<T> targetElementType) {
+//        Environment environment = applicationContext.getEnvironment();
+//        ConversionService conversionService = applicationContext.getBean(ConversionService.class);
+//        return getProperties(environment, conversionService, key, targetElementType);
+//    }
 
-    public static <T> List<T> getProperties(ApplicationContext applicationContext, String key, Class<T> targetElementType) {
-        Environment environment = applicationContext.getEnvironment();
-        ConversionService conversionService = applicationContext.getBean(ConversionService.class);
-        return getProperties(environment, conversionService, key, targetElementType);
-    }
-
-    public static List<String> getProperties(Environment environment, String key, List<String> defaultValues) {
+    private static List<String> getProperties(Environment environment, String key, List<String> defaultValues) {
         class StringArrayList extends ArrayList<String> {
             private StringArrayList(Collection<? extends String> c) {
                 super(c);
