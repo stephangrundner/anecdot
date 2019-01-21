@@ -22,9 +22,9 @@ import java.util.List;
  * https://thumbor.readthedocs.io/en/latest/image_loader.html
  * https://thumbor.readthedocs.io/en/latest/configuration.html
  */
-public class Thumbor implements ApplicationRunner {
+public class ThumborRunner implements ApplicationRunner {
 
-    private static final Logger LOG = LoggerFactory.getLogger(Thumbor.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ThumborRunner.class);
 
     private static boolean instantiated = false;
     {

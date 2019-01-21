@@ -1,4 +1,4 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
 import javax.persistence.*;
 import java.util.Collections;

@@ -1,4 +1,4 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
 import javax.persistence.*;
 import java.time.LocalDateTime;
@@ -8,9 +8,6 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "uri"}))
-//@SecondaryTable(name = "document",
-//        uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "uri"}))
-//@DiscriminatorValue("document")
 public class Page extends Fragment {
 
     @ManyToOne(optional = false)

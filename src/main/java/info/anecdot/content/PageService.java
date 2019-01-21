@@ -1,12 +1,10 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
 import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.apache.commons.collections4.map.LazyMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Slice;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UrlPathHelper;
 
@@ -17,7 +15,7 @@ import java.util.*;
  * @author Stephan Grundner
  */
 @Service
-public class PageService extends FragmentService {
+public class PageService {
 
     private static final Logger LOG = LoggerFactory.getLogger(PageService.class);
 
@@ -45,17 +43,17 @@ public class PageService extends FragmentService {
         return pageRepository.findById(id).orElse(null);
     }
 
-    public Page findPageByHostAndUri(Site site, String uri) {
+    public Page findPageBySiteAndUri(Site site, String uri) {
         return pageRepository.findBySiteAndUri(site, uri);
     }
 
-    public List<Page> findPagesByHostAndUriStartingWith(Site site, String path) {
+    public List<Page> findPagesBySiteAndUriStartingWith(Site site, String path) {
         return pageRepository.findBySiteAndUriStartingWith(site, path);
     }
 
-    public Slice<Page> findPagesByHostAndUriLike(Site site, String path, int offset, int limit) {
-        return pageRepository.findBySiteAndUriLike(site, path, PageRequest.of(offset, limit));
-    }
+//    public Slice<Page> findPagesByHostAndUriLike(Site site, String path, int offset, int limit) {
+//        return pageRepository.findBySiteAndUriLike(site, path, PageRequest.of(offset, limit));
+//    }
 
     public Page findPageByRequest(HttpServletRequest request) {
         Site site = siteService.findSiteByRequest(request);
@@ -66,7 +64,7 @@ public class PageService extends FragmentService {
             uri = site.getHome();
         }
 
-        return findPageByHostAndUri(site, uri);
+        return findPageBySiteAndUri(site, uri);
     }
 
     public void savePage(Page page) {

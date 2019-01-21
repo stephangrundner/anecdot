@@ -1,8 +1,5 @@
-package info.anecdot.servlet;
+package info.anecdot.content;
 
-import info.anecdot.model.SiteService;
-import info.anecdot.model.Page;
-import info.anecdot.model.PageService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;

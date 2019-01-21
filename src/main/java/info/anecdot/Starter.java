@@ -3,8 +3,8 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.config.PropertyResolverUtils;
-import info.anecdot.model.Site;
-import info.anecdot.model.SiteService;
+import info.anecdot.content.Site;
+import info.anecdot.content.SiteService;
 import info.anecdot.servlet.*;
 import org.apache.catalina.connector.Connector;
 import org.slf4j.Logger;
@@ -39,9 +39,9 @@ import java.util.concurrent.Executors;
 @SpringBootApplication
 @EnableJpaRepositories
 @PropertySource("anecdot.properties")
-public class Application implements ApplicationRunner, WebMvcConfigurer {
+public class Starter implements ApplicationRunner, WebMvcConfigurer {
 
-	private static final Logger LOG = LoggerFactory.getLogger(Application.class);
+	private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
 
 	private static boolean init = false; {
 		if (init) {
@@ -52,9 +52,6 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 
 	@Autowired
 	private ApplicationContext applicationContext;
-
-//	@Autowired
-//	private SpringTemplateEngine templateEngine;
 
 	@Autowired
 	private SiteService siteService;
@@ -86,8 +83,8 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 
 	@Bean
 	@ConditionalOnMissingBean
-	protected Thumbor thumborRunner() {
-		return new Thumbor();
+	protected ThumborRunner thumborRunner() {
+		return new ThumborRunner();
 	}
 
 	@Override
@@ -151,7 +148,7 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 
 		ExecutorService executorService = Executors.newCachedThreadPool();
 
-		for (Site site : siteService.findAllHosts()) {
+		for (Site site : siteService.findAllSites()) {
 			executorService.submit(() -> {
 				try {
 					siteService.observe(site);
@@ -163,7 +160,7 @@ public class Application implements ApplicationRunner, WebMvcConfigurer {
 	}
 
 	public static void main(String[] args) {
-		new SpringApplicationBuilder(Application.class)
+		new SpringApplicationBuilder(Starter.class)
 //				.initializers(new PropertiesFileInitializer())
 				.bannerMode(Banner.Mode.OFF)
 				.web(WebApplicationType.SERVLET)

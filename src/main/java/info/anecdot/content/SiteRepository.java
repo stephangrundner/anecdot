@@ -1,4 +1,4 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;

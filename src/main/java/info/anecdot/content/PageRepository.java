@@ -1,7 +1,5 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -16,5 +14,5 @@ public interface PageRepository extends JpaRepository<Page, Long> {
     Page findBySiteAndUri(Site site, String uri);
 
     List<Page> findBySiteAndUriStartingWith(Site site, String path);
-    Slice<Page> findBySiteAndUriLike(Site site, String path, Pageable pageable);
+//    Slice<Page> findBySiteAndUriLike(Site site, String path, Pageable pageable);
 }

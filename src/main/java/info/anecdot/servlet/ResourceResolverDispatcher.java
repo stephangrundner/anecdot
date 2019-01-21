@@ -1,7 +1,7 @@
 package info.anecdot.servlet;
 
-import info.anecdot.model.Site;
-import info.anecdot.model.SiteService;
+import info.anecdot.content.Site;
+import info.anecdot.content.SiteService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;

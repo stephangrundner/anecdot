@@ -1,7 +1,7 @@
 package info.anecdot.servlet;
 
-import info.anecdot.model.Page;
-import info.anecdot.model.PageService;
+import info.anecdot.content.Page;
+import info.anecdot.content.PageService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;

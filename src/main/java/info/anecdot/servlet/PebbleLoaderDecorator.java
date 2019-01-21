@@ -1,8 +1,8 @@
 package info.anecdot.servlet;
 
 import com.mitchellbosecke.pebble.loader.Loader;
-import info.anecdot.model.Site;
-import info.anecdot.model.SiteService;
+import info.anecdot.content.Site;
+import info.anecdot.content.SiteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;

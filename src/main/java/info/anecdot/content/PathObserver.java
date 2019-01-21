@@ -1,4 +1,4 @@
-package info.anecdot.io;
+package info.anecdot.content;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

@@ -1,7 +1,5 @@
-package info.anecdot.model;
+package info.anecdot.content;
 
-import info.anecdot.io.PageLoader;
-import info.anecdot.io.PathObserver;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,9 +21,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * @author Stephan Grundner
@@ -50,8 +46,6 @@ public class SiteService {
     @Autowired
     private Environment environment;
 
-    private Map<String, Properties> propertiesByHostKey = new ConcurrentHashMap<>();
-
     public String resolveHostName(HttpServletRequest request) {
         String hostName = Collections.list(request.getHeaderNames()).stream()
                 .filter(it -> "X-Real-IP".equalsIgnoreCase(it)
@@ -70,7 +64,7 @@ public class SiteService {
         return hostName;
     }
 
-    public List<Site> findAllHosts() {
+    public List<Site> findAllSites() {
         return siteRepository.findAll();
     }
 
@@ -113,7 +107,7 @@ public class SiteService {
 
             String uri = toUri(site, file);
 
-            Page page = pageService.findPageByHostAndUri(site, uri);
+            Page page = pageService.findPageBySiteAndUri(site, uri);
             if (page == null) {
                 page = pageLoader.loadPage(file);
                 page.setSite(site);
@@ -206,7 +200,7 @@ public class SiteService {
                 String uri = toUri(site, path);
 
                 if (!file) {
-                    List<Page> pages = pageService.findPagesByHostAndUriStartingWith(site, uri);
+                    List<Page> pages = pageService.findPagesBySiteAndUriStartingWith(site, uri);
 
                     LOG.info("Deleted dir: {}", path);
                 } else {

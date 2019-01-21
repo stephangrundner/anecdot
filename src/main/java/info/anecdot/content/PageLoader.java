@@ -1,7 +1,5 @@
-package info.anecdot.io;
+package info.anecdot.content;
 
-import info.anecdot.model.Fragment;
-import info.anecdot.model.Page;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;

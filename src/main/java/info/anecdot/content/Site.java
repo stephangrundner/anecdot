@@ -1,6 +1,4 @@
-package info.anecdot.model;
-
-import info.anecdot.io.PathConverter;
+package info.anecdot.content;
 
 import javax.persistence.*;
 import java.nio.file.Path;

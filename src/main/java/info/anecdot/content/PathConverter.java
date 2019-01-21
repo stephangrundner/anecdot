@@ -1,4 +1,4 @@
-package info.anecdot.io;
+package info.anecdot.content;
 
 import org.springframework.util.StringUtils;
 

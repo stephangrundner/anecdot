@@ -12,7 +12,7 @@ import javax.servlet.http.HttpServletResponse;
 public class ThumborRequestInterceptor implements HandlerInterceptor {
 
     @Autowired
-    private Thumbor thumbor;
+    private ThumborRunner thumborRunner;
 
     private boolean isThumborRequest(HttpServletRequest request) {
         return request.getParameter("size") != null;
@@ -21,7 +21,7 @@ public class ThumborRequestInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         if (isThumborRequest(request)) {
-            thumbor.process(request, response);
+            thumborRunner.process(request, response);
 
             return false;
         }
