@@ -144,7 +144,7 @@ public class SiteService {
 
             if (properties.containsKey("theme")) {
                 Path theme = Paths.get(properties.getProperty("theme"));
-                site.setTheme(theme);
+                site.setTheme(site.getContent().resolve(theme));
             }
 
             properties.forEach((k, v) -> {

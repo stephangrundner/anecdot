@@ -31,7 +31,8 @@ public class PageController {
         }
 
         ModelAndView modelAndView = new ModelAndView();
-        modelAndView.addAllObjects(pageService.toMap(page));
+//        modelAndView.addAllObjects(pageService.toMap(page));
+        modelAndView.addObject("page", pageService.toMap(page));
 
         String hostName = siteService.resolveHostName(request);
         modelAndView.addObject("#host", hostName);
