@@ -38,7 +38,7 @@ public class Fragment {
     private String text;
 
     @ElementCollection
-    @CollectionTable(name = "adfvsdfv")
+    @CollectionTable(name = "attribute")
     @MapKeyColumn(name = "name")
     @Column(name = "value")
     private final Map<String, String> attributes = new LinkedHashMap<>();
@@ -105,40 +105,6 @@ public class Fragment {
             fragment = fragment.getParent();
         }
     }
-
-//    public String getPropertyPath() {
-//        LinkedList<String> segments = new LinkedList<>();
-//
-//        Fragment fragment = this;
-//        do {
-//            if (fragment instanceof Document)
-//                break;
-//
-//            segments.addFirst(String.format("%s[%d]",
-//                    fragment.getName(),
-//                    fragment.getOrdinal()));
-//
-//            fragment = fragment.getParent();
-//        } while (fragment != null);
-//
-//        return segments.stream().collect(Collectors.joining("."));
-//    }
-
-//    public void setPropertyPath(String propertyPath) {
-//        this.propertyPath = propertyPath;
-//    }
-
-//    public String getName() {
-//        Fragment parent = getParent();
-//        if (parent != null) {
-//            return parent.getChildren().entrySet().stream()
-//                    .filter(it -> it.getValue().equals(this))
-//                    .map(Map.Entry::getKey)
-//                    .findFirst().orElse(null);
-//        }
-//
-//        return null;
-//    }
 
     public Map<String, String> getAttributes() {
         return attributes;

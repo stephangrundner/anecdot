@@ -2,7 +2,6 @@ package info.anecdot;
 
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
-import info.anecdot.config.PropertyResolverUtils;
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
 import info.anecdot.servlet.*;
@@ -32,6 +31,9 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -42,6 +44,38 @@ import java.util.concurrent.Executors;
 public class Starter implements ApplicationRunner, WebMvcConfigurer {
 
 	private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
+
+//    private static <T> List<T> getProperties(PropertyResolver propertyResolver, ConversionService conversionService, String key, Class<T> targetElementType) {
+//        class StringArrayList extends ArrayList<T> {
+//            public StringArrayList() { }
+//        }
+//
+//        return propertyResolver.getProperty(key, StringArrayList.class).stream()
+//                .map(it -> conversionService.convert(it, targetElementType))
+//                .collect(Collectors.toList());
+//    }
+
+//    public static <T> List<T> getProperties(ApplicationContext applicationContext, String key, Class<T> targetElementType) {
+//        Environment environment = applicationContext.getEnvironment();
+//        ConversionService conversionService = applicationContext.getBean(ConversionService.class);
+//        return getProperties(environment, conversionService, key, targetElementType);
+//    }
+
+	private static List<String> getProperties(Environment environment, String key, List<String> defaultValues) {
+		class StringArrayList extends ArrayList<String> {
+			private StringArrayList(Collection<? extends String> c) {
+				super(c);
+			}
+
+			public StringArrayList() { }
+		}
+
+		return environment.getProperty(key, StringArrayList.class, new StringArrayList(defaultValues));
+	}
+
+	public static List<String> getProperties(Environment environment, String key) {
+		return getProperties(environment, key, Collections.emptyList());
+	}
 
 	private static boolean init = false; {
 		if (init) {
@@ -126,12 +160,12 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
 	@Override
 	public void run(ApplicationArguments args) throws Exception {
 		Environment environment = applicationContext.getEnvironment();
-		List<String> keys = PropertyResolverUtils.getProperties(environment, "anecdot.sites");
+		List<String> keys = getProperties(environment, "anecdot.sites");
 		for (String key : keys) {
 			Site site = new Site();
 			String prefix = String.format("anecdot.site.%s", key);
 
-			List<String> names = PropertyResolverUtils.getProperties(environment, prefix + ".hosts");
+			List<String> names = getProperties(environment, prefix + ".hosts");
 			site.getHosts().addAll(names);
 
 			String content = environment.getProperty(prefix + ".content");

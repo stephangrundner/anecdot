@@ -147,9 +147,9 @@ public class SiteService {
                 site.setTheme(site.getContent().resolve(theme));
             }
 
-            properties.forEach((k, v) -> {
-                site.getProperties().put(k.toString(), v.toString());
-            });
+//            properties.forEach((k, v) -> {
+//                site.getProperties().put(k.toString(), v.toString());
+//            });
 
             saveSite(site);
         }

@@ -3,9 +3,7 @@ package info.anecdot.content;
 import javax.persistence.*;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -30,28 +28,20 @@ public class Site {
     private Path theme;
 
     @ElementCollection
-    @CollectionTable(name = "site_host",
-            joinColumns = @JoinColumn(name = "host_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "name"}))
+    @CollectionTable(name = "host",
+            joinColumns = @JoinColumn(name = "site_id"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "name"}))
     @Column(name = "name")
     private final Set<String> hosts = new LinkedHashSet<>();
 
     private String home;
 
     @ElementCollection
-    @CollectionTable(name = "hidden_file",
+    @CollectionTable(name = "ignored",
             joinColumns = @JoinColumn(name = "host_id"),
             uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "pattern"}))
     @Column(name = "pattern")
     private final Set<String> hidden = new LinkedHashSet<>();
-
-    @ElementCollection
-    @CollectionTable(name = "configuration",
-            joinColumns = @JoinColumn(name = "host_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "prop"}))
-    @Column(name = "value")
-    @MapKeyColumn(name = "prop")
-    private final Map<String, String> properties = new HashMap<>();
 
     private LocalDateTime lastModified;
 
@@ -93,9 +83,5 @@ public class Site {
 
     public void setLastModified(LocalDateTime lastModified) {
         this.lastModified = lastModified;
-    }
-
-    public Map<String, String> getProperties() {
-        return properties;
     }
 }
