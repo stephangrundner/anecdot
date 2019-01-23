@@ -20,19 +20,19 @@ public class PageController {
     private SiteService siteService;
 
     @Autowired
-    private PageService pageService;
+    private ItemService itemService;
 
     @GetMapping(path = "/page")
     protected ModelAndView byId(@RequestParam(name = "id") Long id,
                                 HttpServletRequest request) {
-        Page page = pageService.findPageById(id);
+        Item page = itemService.findPageById(id);
         if (page == null) {
             throw new RuntimeException("No page found for id " + id);
         }
 
         ModelAndView modelAndView = new ModelAndView();
 //        modelAndView.addAllObjects(pageService.toMap(page));
-        modelAndView.addObject("page", pageService.toMap(page));
+        modelAndView.addObject("page", itemService.toMap(page));
 
         String hostName = siteService.resolveHostName(request);
         modelAndView.addObject("#host", hostName);

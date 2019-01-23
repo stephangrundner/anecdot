@@ -145,7 +145,8 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
 
 		Environment environment = applicationContext.getEnvironment();
 		String themeDirectory = environment.getProperty("anecdot.theme-directory", "/theme");
-		registry.addResourceHandler("/**").addResourceLocations("file:" + themeDirectory);
+		registry.addResourceHandler("/**")
+				.addResourceLocations("file:" + themeDirectory);
 
 		registry.addResourceHandler("/**")
 				.resourceChain(false)

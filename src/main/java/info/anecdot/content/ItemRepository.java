@@ -9,10 +9,11 @@ import java.util.List;
  * @author Stephan Grundner
  */
 @Repository
-public interface PageRepository extends JpaRepository<Page, Long> {
+public interface ItemRepository extends JpaRepository<Item, Long> {
 
-    Page findBySiteAndUri(Site site, String uri);
+    Item findBySiteAndUri(Site site, String uri);
+    Item findBySiteAndUriAndPageIsTrue(Site site, String uri);
 
-    List<Page> findBySiteAndUriStartingWith(Site site, String path);
+    List<Item> findBySiteAndUriStartingWithAndPageIsTrue(Site site, String path);
 //    Slice<Page> findBySiteAndUriLike(Site site, String path, Pageable pageable);
 }

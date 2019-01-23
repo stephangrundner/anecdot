@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "uri"}))
-public class Page extends Fragment {
+public class Item extends Fragment {
 
     @ManyToOne(optional = false)
     @JoinColumn(name = "site_id")
@@ -16,6 +16,7 @@ public class Page extends Fragment {
 
     private String uri;
     private String type;
+    private boolean page;
     private LocalDateTime created;
     private LocalDateTime modified;
 
@@ -41,6 +42,14 @@ public class Page extends Fragment {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public boolean isPage() {
+        return page;
+    }
+
+    public void setPage(boolean page) {
+        this.page = page;
     }
 
     public LocalDateTime getCreated() {

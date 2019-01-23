@@ -35,10 +35,10 @@ public class SiteService {
     private SiteRepository siteRepository;
 
     @Autowired
-    private PageLoader pageLoader;
+    private ItemLoader pageLoader;
 
     @Autowired
-    private PageService pageService;
+    private ItemService itemService;
 
     @Autowired
     private ApplicationContext applicationContext;
@@ -107,23 +107,23 @@ public class SiteService {
 
             String uri = toUri(site, file);
 
-            Page page = pageService.findPageBySiteAndUri(site, uri);
-            if (page == null) {
-                page = pageLoader.loadPage(file);
-                page.setSite(site);
-                page.setUri(uri);
+            Item item = itemService.findPageBySiteAndUri(site, uri);
+            if (item == null) {
+                item = pageLoader.loadPage(file);
+                item.setSite(site);
+                item.setUri(uri);
             } else {
                 BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
                 LocalDateTime modified = LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC);
-                if (force || !modified.isEqual(page.getModified())) {
-                    pageService.deletePage(page);
-                    page = pageLoader.loadPage(file);
-                    page.setSite(site);
-                    page.setUri(uri);
+                if (force || !modified.isEqual(item.getModified())) {
+                    itemService.deletePage(item);
+                    item = pageLoader.loadPage(file);
+                    item.setSite(site);
+                    item.setUri(uri);
                 }
             }
 
-            pageService.savePage(page);
+            itemService.savePage(item);
             LOG.info("Reloaded page for file {}", file);
 
         } catch (IOException e) {
@@ -200,7 +200,7 @@ public class SiteService {
                 String uri = toUri(site, path);
 
                 if (!file) {
-                    List<Page> pages = pageService.findPagesBySiteAndUriStartingWith(site, uri);
+                    List<Item> items = itemService.findPagesBySiteAndUriStartingWith(site, uri);
 
                     LOG.info("Deleted dir: {}", path);
                 } else {

@@ -15,9 +15,9 @@ import java.util.*;
  * @author Stephan Grundner
  */
 @Service
-public class PageService {
+public class ItemService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PageService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ItemService.class);
 
     private UrlPathHelper pathHelper;
 
@@ -25,7 +25,7 @@ public class PageService {
     private SiteService siteService;
 
     @Autowired
-    private PageRepository pageRepository;
+    private ItemRepository itemRepository;
 
     public UrlPathHelper getPathHelper() {
         if (pathHelper == null) {
@@ -39,23 +39,27 @@ public class PageService {
         this.pathHelper = pathHelper;
     }
 
-    public Page findPageById(Long id) {
-        return pageRepository.findById(id).orElse(null);
+    public Item findPageById(Long id) {
+        return itemRepository.findById(id).orElse(null);
     }
 
-    public Page findPageBySiteAndUri(Site site, String uri) {
-        return pageRepository.findBySiteAndUri(site, uri);
+    public Item findItemBySiteAndUri(Site site, String uri) {
+        return itemRepository.findBySiteAndUri(site, uri);
     }
 
-    public List<Page> findPagesBySiteAndUriStartingWith(Site site, String path) {
-        return pageRepository.findBySiteAndUriStartingWith(site, path);
+    public Item findPageBySiteAndUri(Site site, String uri) {
+        return itemRepository.findBySiteAndUriAndPageIsTrue(site, uri);
+    }
+
+    public List<Item> findPagesBySiteAndUriStartingWith(Site site, String path) {
+        return itemRepository.findBySiteAndUriStartingWithAndPageIsTrue(site, path);
     }
 
 //    public Slice<Page> findPagesByHostAndUriLike(Site site, String path, int offset, int limit) {
 //        return pageRepository.findBySiteAndUriLike(site, path, PageRequest.of(offset, limit));
 //    }
 
-    public Page findPageByRequest(HttpServletRequest request) {
+    public Item findPageByRequest(HttpServletRequest request) {
         Site site = siteService.findSiteByRequest(request);
         UrlPathHelper pathHelper = getPathHelper();
 
@@ -67,12 +71,12 @@ public class PageService {
         return findPageBySiteAndUri(site, uri);
     }
 
-    public void savePage(Page page) {
-        pageRepository.saveAndFlush(page);
+    public void savePage(Item item) {
+        itemRepository.saveAndFlush(item);
     }
 
-    public void deletePage(Page page) {
-        pageRepository.delete(page);
+    public void deletePage(Item item) {
+        itemRepository.delete(item);
     }
 
     private <K> Map<K, Object> createMap(){
@@ -128,7 +132,7 @@ public class PageService {
         return toMap(fragment, fragmentName, Collections.emptyMap(), 0);
     }
 
-    public Map<String, Object> toMap(Page page) {
-        return toMap(page, page.getType());
+    public Map<String, Object> toMap(Item item) {
+        return toMap(item, item.getType());
     }
 }
