@@ -1,56 +1,55 @@
 package info.anecdot.content;
 
-import javax.persistence.*;
 import java.nio.file.Path;
-import java.time.LocalDateTime;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 /**
  * @author Stephan Grundner
  */
-@Entity
 public class Site {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    public Long getId() {
-        return id;
-    }
-
-    @Convert(converter = PathConverter.class)
-    @Column(unique = true)
-    private Path content;
-
-    @Convert(converter = PathConverter.class)
-    private Path theme;
-
-    @ElementCollection
-    @CollectionTable(name = "host",
-            joinColumns = @JoinColumn(name = "site_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"site_id", "name"}))
-    @Column(name = "name")
     private final Set<String> hosts = new LinkedHashSet<>();
+    private final Map<String, Item> pages = new LinkedHashMap<>();
+
+    private Path base;
+    private Path theme;
 
     private String home;
 
-    @ElementCollection
-    @CollectionTable(name = "ignored",
-            joinColumns = @JoinColumn(name = "host_id"),
-            uniqueConstraints = @UniqueConstraint(columnNames = {"host_id", "pattern"}))
-    @Column(name = "pattern")
-    private final Set<String> hidden = new LinkedHashSet<>();
-
-    private LocalDateTime lastModified;
-
-    public Path getContent() {
-        return content;
+    public Set<String> getHosts() {
+        return hosts;
     }
 
-    public void setContent(Path content) {
-        this.content = content;
+    public Collection<Item> getPages() {
+        return Collections.unmodifiableCollection(pages.values());
+    }
+
+//    public Set<String> getFiles() {
+//        return Collections.unmodifiableSet(pages.keySet());
+//    }
+
+    public Item getPage(Path file) {
+        return pages.get(file);
+    }
+
+    public Item putPage(Item item) {
+        String path = item.getUri();
+        Item replaced = pages.put(path, item);
+        if (replaced != null) {
+            replaced.setSite(null);
+        }
+
+        item.setSite(this);
+
+        return replaced;
+    }
+
+    public Path getBase() {
+        return base;
+    }
+
+    public void setBase(Path base) {
+        this.base = base;
     }
 
     public Path getTheme() {
@@ -61,27 +60,11 @@ public class Site {
         this.theme = theme;
     }
 
-    public Set<String> getHosts() {
-        return hosts;
-    }
-
     public String getHome() {
         return home;
     }
 
     public void setHome(String home) {
         this.home = home;
-    }
-
-    public Set<String> getHidden() {
-        return hidden;
-    }
-
-    public LocalDateTime getLastModified() {
-        return lastModified;
-    }
-
-    public void setLastModified(LocalDateTime lastModified) {
-        this.lastModified = lastModified;
     }
 }

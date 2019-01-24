@@ -23,21 +23,20 @@ public class PageController {
     private ItemService itemService;
 
     @GetMapping(path = "/page")
-    protected ModelAndView byId(@RequestParam(name = "id") Long id,
+    protected ModelAndView byId(@RequestParam(name = "uri") String uri,
                                 HttpServletRequest request) {
-        Item page = itemService.findPageById(id);
-        if (page == null) {
-            throw new RuntimeException("No page found for id " + id);
+        Item item = (Item) request.getAttribute(Item.class.getName());
+        if (item == null) {
+            item = itemService.findItemByRequestAndUri(request, uri);
+            if (item == null) {
+                throw new RuntimeException("No item found for uri " + uri);
+            }
         }
 
         ModelAndView modelAndView = new ModelAndView();
-//        modelAndView.addAllObjects(pageService.toMap(page));
-        modelAndView.addObject("page", itemService.toMap(page));
+        modelAndView.addObject("page", itemService.toMap(item));
 
-        String hostName = siteService.resolveHostName(request);
-        modelAndView.addObject("#host", hostName);
-
-        modelAndView.setViewName(page.getType());
+        modelAndView.setViewName(item.getType());
 
         return modelAndView;
     }

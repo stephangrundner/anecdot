@@ -1,6 +1,8 @@
 package info.anecdot.content;
 
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
@@ -11,9 +13,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 /**
  * @author Stephan Grundner
@@ -37,63 +36,76 @@ public class ItemLoader {
         return false;
     }
 
-    private void toFragment(Node node, Fragment fragment) {
-        NodeList children = node.getChildNodes();
-        for (int i = 0; i < children.getLength(); i++) {
-            Node childNode = children.item(i);
-            if (childNode.getNodeName().startsWith("#")) {
-                continue;
-            }
+    private boolean isRootNode(Node node) {
+        Node parentNode = node.getParentNode();
+        return parentNode != null && parentNode.getNodeType() == Node.DOCUMENT_NODE;
+    }
 
-            Fragment childFragment = fromNode(childNode);
-            String name = childNode.getNodeName();
-            fragment.appendChild(name, childFragment);
-        }
+    private Payload fromNode(Node node) {
+        Payload payload;
 
         if (!hasChildElements(node)) {
-            fragment.setText(node.getTextContent());
+            Text text = new Text();
+            text.setValue(node.getTextContent());
+
+            payload = text;
+        } else {
+            Fragment fragment;
+
+            if (isRootNode(node)) {
+                Item item = new Item();
+                item.setType(node.getNodeName());
+
+                fragment = item;
+            } else {
+                fragment = new Fragment();
+            }
+
+            NodeList children = node.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node childNode = children.item(i);
+                if (childNode.getNodeName().startsWith("#")) {
+                    continue;
+                }
+
+                String childName = childNode.getNodeName();
+                Payload.Sequence sequence = fragment.getSequence(childName);
+                if (sequence == null) {
+                    sequence = new Payload.Sequence();
+                    fragment.setSequence(childName, sequence);
+                }
+                sequence.addPayload(fromNode(childNode));
+            }
+
+            payload = fragment;
         }
+
 
         NamedNodeMap attributes = node.getAttributes();
-        for (int i = 0; i < attributes.getLength(); i++) {
-            Attr attribute = (Attr) attributes.item(i);
-            fragment.getAttributes().put(attribute.getName(), attribute.getValue());
-        }
-    }
-
-    private Fragment fromNode(Node node) {
-        if (node.getNodeType() == Node.DOCUMENT_NODE) {
-            Element document = ((org.w3c.dom.Document) node).getDocumentElement();
-            Item item = new Item();
-            item.setType(document.getNodeName());
-//            TODO setPage!
-            item.setPage(true);
-
-//            String category = document.getAttribute("category");
-//            item.setCategory(category);
-
-            toFragment(document, item);
-
-            return item;
+        if (attributes != null) {
+            for (int i = 0; i < attributes.getLength(); i++) {
+                Attr attribute = (Attr) attributes.item(i);
+                payload.getAttributes().put(attribute.getName(), attribute.getValue());
+            }
         }
 
-        Fragment fragment = new Fragment();
-        toFragment(node, fragment);
-
-        return fragment;
+        return payload;
     }
 
-    public Item loadPage(Path file) throws IOException {
+    public Item loadItem(Path directory, Path file) throws IOException {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         try (InputStream inputStream = Files.newInputStream(file)) {
             DocumentBuilder db = dbf.newDocumentBuilder();
-            org.w3c.dom.Document document = db.parse(inputStream);
+            Document document = db.parse(inputStream);
+            Item item = (Item) fromNode(document.getDocumentElement());
 
-            Item item = (Item) fromNode(document);
+            String path = directory.relativize(file).toString();
+            path = FilenameUtils.removeExtension(path);
+            if (!StringUtils.startsWithIgnoreCase(path, "/")) {
+                path = "/" + path;
+            }
 
-            BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
-            item.setCreated(LocalDateTime.ofInstant(attributes.creationTime().toInstant(), ZoneOffset.UTC));
-            item.setModified(LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC));
+            item.setUri(path);
 
             return item;
         } catch (SAXException | ParserConfigurationException e) {

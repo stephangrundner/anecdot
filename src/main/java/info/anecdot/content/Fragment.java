@@ -1,112 +1,38 @@
 package info.anecdot.content;
 
-import javax.persistence.*;
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Stephan Grundner
  */
-@Entity
-@Inheritance(strategy = InheritanceType.JOINED)
-public class Fragment {
+public class Fragment extends Payload {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private final Map<String, Sequence> sequences = new LinkedHashMap<>();
 
-    public Long getId() {
-        return id;
+    public Set<String> getSequenceNames() {
+        return Collections.unmodifiableSet(sequences.keySet());
     }
 
-    @ManyToOne
-    private Fragment parent;
-
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinTable(name = "first_child",
-            joinColumns = @JoinColumn(name = "fragment_id"),
-            inverseJoinColumns = @JoinColumn(name = "first_id"))
-    @MapKeyColumn(name = "name")
-    private final Map<String, Fragment> children = new LinkedHashMap<>();
-
-    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
-    private Fragment next;
-
-    @Lob
-    @Column(name = "[text]")
-    private String text;
-
-    @ElementCollection
-    @CollectionTable(name = "attribute")
-    @MapKeyColumn(name = "name")
-    @Column(name = "value")
-    private final Map<String, String> attributes = new LinkedHashMap<>();
-
-    public Fragment getParent() {
-        return parent;
+    public Collection<Sequence> getSequences() {
+        return Collections.unmodifiableCollection(sequences.values());
     }
 
-    private void setParent(Fragment parent) {
-        this.parent = parent;
+    public Sequence getSequence(String name) {
+        return sequences.get(name);
     }
 
-    public Map<String, Fragment> getChildren() {
-        return Collections.unmodifiableMap(children);
-    }
-
-    public Fragment getNext() {
-        return next;
-    }
-
-    private void setNext(Fragment next) {
-        this.next = next;
-    }
-
-    public boolean isLast() {
-        return getNext() == null;
-    }
-
-    public Fragment getLast() {
-        Fragment fragment = this;
-        while (!fragment.isLast()) {
-            fragment = fragment.getNext();
+    public Sequence setSequence(String name, Sequence sequence) {
+        Sequence replaced = sequences.put(name, sequence);
+        if (replaced != null) {
+            replaced.setOwner(null);
+            replaced.setName(null);
         }
 
-        return fragment;
-    }
-
-    public void appendChild(String name, Fragment fragment) {
-        Fragment first = children.get(name);
-        if (first == null) {
-            children.put(name, fragment);
-        } else {
-            Fragment last = first.getLast();
-            last.setNext(fragment);
-            fragment.setParent(this);
+        if (sequence != null) {
+            sequence.setOwner(this);
+            sequence.setName(name);
         }
-    }
 
-    public String getText() {
-        return text;
-    }
-
-    public void setText(String text) {
-        this.text = text;
-    }
-
-    public Fragment getRoot() {
-        Fragment fragment = this;
-        while (true) {
-            Fragment parent = fragment.getParent();
-            if (parent == null) {
-                return fragment;
-            }
-            fragment = fragment.getParent();
-        }
-    }
-
-    public Map<String, String> getAttributes() {
-        return attributes;
+        return replaced;
     }
 }

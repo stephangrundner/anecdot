@@ -4,22 +4,17 @@ import com.mitchellbosecke.pebble.extension.AbstractExtension;
 import com.mitchellbosecke.pebble.extension.Function;
 import com.mitchellbosecke.pebble.template.EvaluationContext;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
-import info.anecdot.content.Item;
-import info.anecdot.content.ItemService;
-import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.expression.Expression;
-import org.springframework.expression.ExpressionParser;
-import org.springframework.expression.spel.standard.SpelExpressionParser;
-import org.springframework.expression.spel.support.StandardEvaluationContext;
 import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Stephan Grundner
@@ -48,13 +43,14 @@ public class PebbleItemsExtension extends AbstractExtension {
 
         @Override
         public Object execute(Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) {
-            SiteService siteService = applicationContext.getBean(SiteService.class);
-            Site site = siteService.findSiteByRequest(currentRequest());
-            ItemService itemService = applicationContext.getBean(ItemService.class);
-            String uri = (String) args.get("uri");
-            Item item = itemService.findItemBySiteAndUri(site, uri);
-
-            return item != null ? itemService.toMap(item) : Collections.emptyMap();
+//            SiteService siteService = applicationContext.getBean(SiteService.class);
+//            Site site = siteService.findSiteByRequest(currentRequest());
+//            ItemService itemService = applicationContext.getBean(ItemService.class);
+//            String uri = (String) args.get("uri");
+//            Item item = itemService.findItemBySiteAndUri(site, uri);
+//
+//            return item != null ? itemService.toMap(item) : Collections.emptyMap();
+            return Collections.emptyMap();
         }
 
         @Override

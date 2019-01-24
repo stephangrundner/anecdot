@@ -1,27 +1,27 @@
 package info.anecdot.content;
 
-import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.ApplicationContext;
-import org.springframework.core.env.Environment;
+import org.springframework.core.env.MutablePropertySources;
+import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.core.env.PropertyResolver;
+import org.springframework.core.env.PropertySourcesPropertyResolver;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.core.io.support.PropertiesLoaderUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
-import java.util.Collections;
-import java.util.List;
-import java.util.Properties;
+import java.util.*;
 
 /**
  * @author Stephan Grundner
@@ -31,20 +31,41 @@ public class SiteService {
 
     private static final Logger LOG = LoggerFactory.getLogger(SiteService.class);
 
-    @Autowired
-    private SiteRepository siteRepository;
+    public static final String SITE_BY_HOST_CACHE = "siteByHost";
 
-    @Autowired
-    private ItemLoader pageLoader;
+    private static List<String> getProperties(PropertyResolver propertyResolver, String key, List<String> defaultValues) {
+        class StringArrayList extends ArrayList<String> {
+            private StringArrayList(Collection<? extends String> c) {
+                super(c);
+            }
 
-    @Autowired
-    private ItemService itemService;
+            public StringArrayList() {
+            }
+        }
+
+        return propertyResolver.getProperty(key, StringArrayList.class, new StringArrayList(defaultValues));
+    }
+
+    public static List<String> getProperties(PropertyResolver propertyResolver, String key) {
+        return getProperties(propertyResolver, key, Collections.emptyList());
+    }
+
+    private final Set<Site> sites = new LinkedHashSet<>();
 
     @Autowired
     private ApplicationContext applicationContext;
 
     @Autowired
-    private Environment environment;
+    private ResourceLoader resourceLoader;
+
+    @Autowired
+    private ObservationService observationService;
+
+    @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
+    private SiteService self;
 
     public String resolveHostName(HttpServletRequest request) {
         String hostName = Collections.list(request.getHeaderNames()).stream()
@@ -64,151 +85,57 @@ public class SiteService {
         return hostName;
     }
 
-    public List<Site> findAllSites() {
-        return siteRepository.findAll();
-    }
-
     public Site findSiteByRequest(HttpServletRequest request) {
-        String name = resolveHostName(request);
-        return siteRepository.findByHostsContaining(name);
+        String host = resolveHostName(request);
+        return self.findSiteByHost(host);
     }
 
-    public void saveSite(Site site) {
-        siteRepository.saveAndFlush(site);
+    @Cacheable(cacheNames = {SITE_BY_HOST_CACHE})
+    public Site findSiteByHost(String host) {
+        return sites.stream()
+                .filter(it -> it.getHosts().contains(host))
+                .findFirst().orElse(null);
     }
 
-    private String toUri(Site site, Path path) {
-        Path directory = site.getContent();
-        Path filename = directory.relativize(path);
-        String extension = FilenameUtils.getExtension(filename.toString());
-        String uri = "/" + org.apache.commons.lang.StringUtils.removeEnd(filename.toString(), "." + extension);
+    public void reloadProperties(Path file) throws IOException {
+        observationService.stopAll();
+        sites.clear();
 
-        return uri;
-    }
+        Cache siteByHostCache = cacheManager.getCache(SiteService.SITE_BY_HOST_CACHE);
+        siteByHostCache.clear();
 
-    private boolean accept(Path path) {
-        try {
-            String fileName = path.getFileName().toString();
-            String extension = FilenameUtils.getExtension(fileName);
-            return !fileName.startsWith(".") && "xml".equals(extension);
-//            TODO Also check if file is not ignored by .pageignore file!
+        Cache itemByUriCache = cacheManager.getCache(ItemService.ITEM_BY_URI_CACHE);
+        itemByUriCache.clear();
 
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        Resource resource = resourceLoader.getResource("file:" + file.toRealPath());
+        Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+        MutablePropertySources sources = new MutablePropertySources();
+        PropertiesPropertySource source = new PropertiesPropertySource("sites", properties);
+        sources.addFirst(source);
+        PropertySourcesPropertyResolver propertyResolver = new PropertySourcesPropertyResolver(sources);
+
+        List<String> keys = getProperties(propertyResolver, "anecdot.sites");
+        for (String key : keys) {
+            Site site = new Site();
+            String prefix = String.format("anecdot.site.%s", key);
+
+            List<String> names = getProperties(propertyResolver, prefix + ".hosts");
+            site.getHosts().addAll(names);
+
+            String content = propertyResolver.getProperty(prefix + ".base");
+            if (StringUtils.hasText(content)) {
+                site.setBase(Paths.get(content));
+            }
+
+            String theme = propertyResolver.getProperty(prefix + ".theme");
+            if (StringUtils.hasText(theme)) {
+                site.setTheme(Paths.get(theme));
+            }
+
+            site.setHome(propertyResolver.getProperty(prefix + ".home", "/home"));
+
+            sites.add(site);
+            observationService.start(site);
         }
-    }
-
-    private void reload(Site site, Path file, boolean force) {
-        try {
-            if (!accept(file)) {
-                LOG.info("Ignoring {}", file);
-                return;
-            }
-
-            String uri = toUri(site, file);
-
-            Item item = itemService.findPageBySiteAndUri(site, uri);
-            if (item == null) {
-                item = pageLoader.loadPage(file);
-                item.setSite(site);
-                item.setUri(uri);
-            } else {
-                BasicFileAttributes attributes = Files.readAttributes(file, BasicFileAttributes.class);
-                LocalDateTime modified = LocalDateTime.ofInstant(attributes.lastModifiedTime().toInstant(), ZoneOffset.UTC);
-                if (force || !modified.isEqual(item.getModified())) {
-                    itemService.deletePage(item);
-                    item = pageLoader.loadPage(file);
-                    item.setSite(site);
-                    item.setUri(uri);
-                }
-            }
-
-            itemService.savePage(item);
-            LOG.info("Reloaded page for file {}", file);
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private void reload(Site site, Path file) {
-        reload(site, file, false);
-    }
-
-    public void reloadProperties(Site site) throws IOException {
-        Path directory = site.getContent();
-        Path propertiesFile = directory.resolve(".properties");
-        if (Files.exists(propertiesFile)) {
-            Resource resource = applicationContext.getResource("file:" + propertiesFile.toRealPath());
-            Properties properties = PropertiesLoaderUtils.loadProperties(resource);
-
-            if (properties.containsKey("theme")) {
-                Path theme = Paths.get(properties.getProperty("theme"));
-                site.setTheme(site.getContent().resolve(theme));
-            }
-
-//            properties.forEach((k, v) -> {
-//                site.getProperties().put(k.toString(), v.toString());
-//            });
-
-            saveSite(site);
-        }
-    }
-
-    private void reload(Site site) throws IOException {
-        reloadProperties(site);
-        saveSite(site);
-        Files.walk(site.getContent())
-                .forEach(file ->
-                        reload(site, file, true));
-    }
-
-    public void observe(Site site) throws IOException {
-        PathObserver observer = new PathObserver() {
-            @Override
-            protected void visited(Path file) {
-                reload(site, file);
-            }
-
-            @Override
-            protected void created(Path file) {
-                visited(file);
-            }
-
-            @Override
-            protected void modified(Path file) {
-
-                if (".properties".equals(file.getFileName().toString())) {
-                    try {
-                        reload(site);
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                    return;
-                }
-
-                visited(file);
-            }
-
-            @Override
-            protected void deleted(Path path, boolean file) {
-                if (!accept(path)) {
-                    LOG.info("Ignoring {}", file);
-                    return;
-                }
-
-                String uri = toUri(site, path);
-
-                if (!file) {
-                    List<Item> items = itemService.findPagesBySiteAndUriStartingWith(site, uri);
-
-                    LOG.info("Deleted dir: {}", path);
-                } else {
-                    LOG.info("Deleted file: {}", path);
-                }
-            }
-        };
-
-        observer.start(site.getContent());
     }
 }

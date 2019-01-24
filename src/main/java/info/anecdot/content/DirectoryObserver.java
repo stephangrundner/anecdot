@@ -11,9 +11,9 @@ import java.util.Set;
 /**
  * @author Stephan Grundner
  */
-public class PathObserver {
+public class DirectoryObserver {
 
-    private static final Logger LOG = LoggerFactory.getLogger(PathObserver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(DirectoryObserver.class);
 
     private final WatchService watchService;
 
@@ -133,15 +133,15 @@ public class PathObserver {
         }
     }
 
-    public PathObserver(WatchService watchService) {
+    public DirectoryObserver(WatchService watchService) {
         this.watchService = watchService;
     }
 
-    public PathObserver(FileSystem fileSystem) throws IOException {
+    public DirectoryObserver(FileSystem fileSystem) throws IOException {
         this(fileSystem.newWatchService());
     }
 
-    public PathObserver() throws IOException {
+    public DirectoryObserver() throws IOException {
         this(FileSystems.getDefault());
     }
 }

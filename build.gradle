@@ -33,15 +33,12 @@ def mysqlVersion = '5.1.39'
 
 dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-web')
-	implementation('org.springframework.boot:spring-boot-starter-data-jpa')
-//	implementation('org.springframework.boot:spring-boot-starter-thymeleaf')
 	implementation('io.pebbletemplates:pebble-spring-boot-2-starter:3.0.7')
 
-//	compile group: 'org.thymeleaf', name: 'thymeleaf', version: '3.0.7.RELEASE'
-//	compile group: 'org.thymeleaf', name: 'thymeleaf-spring4', version: '3.0.7.RELEASE'
+//	compile 'org.mongodb:mongodb-driver-legacy:3.9.1'
 
 	compile group: 'commons-io', name: 'commons-io', version: '2.6'
-	compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
+//	compile group: 'commons-lang', name: 'commons-lang', version: '2.6'
 	compile group: 'org.apache.commons', name: 'commons-collections4', version: '4.2'
 
 	compile group: 'com.h2database', name: 'h2', version: '1.4.197'
@@ -50,6 +47,7 @@ dependencies {
 	compile group: 'com.zaxxer', name: 'HikariCP', version: '3.2.0'
 
 	compile group: 'org.jsoup', name: 'jsoup', version: '1.11.3'
+//	compile group: 'org.ehcache', name: 'ehcache', version: '3.6.3'
 
 	testImplementation('org.springframework.boot:spring-boot-starter-test')
 }

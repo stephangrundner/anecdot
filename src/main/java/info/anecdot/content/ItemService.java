@@ -1,10 +1,9 @@
 package info.anecdot.content;
 
-import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.apache.commons.collections4.map.LazyMap;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.UrlPathHelper;
 
@@ -17,15 +16,18 @@ import java.util.*;
 @Service
 public class ItemService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ItemService.class);
+    public static final String ITEM_BY_URI_CACHE = "itemByUri";
 
-    private UrlPathHelper pathHelper;
+    @Autowired
+    private ApplicationContext applicationContext;
 
     @Autowired
     private SiteService siteService;
 
     @Autowired
-    private ItemRepository itemRepository;
+    private ItemService self;
+
+    private UrlPathHelper pathHelper;
 
     public UrlPathHelper getPathHelper() {
         if (pathHelper == null) {
@@ -35,51 +37,44 @@ public class ItemService {
         return pathHelper;
     }
 
-    public void setPathHelper(UrlPathHelper pathHelper) {
-        this.pathHelper = pathHelper;
-    }
-
-    public Item findPageById(Long id) {
-        return itemRepository.findById(id).orElse(null);
-    }
-
-    public Item findItemBySiteAndUri(Site site, String uri) {
-        return itemRepository.findBySiteAndUri(site, uri);
-    }
-
-    public Item findPageBySiteAndUri(Site site, String uri) {
-        return itemRepository.findBySiteAndUriAndPageIsTrue(site, uri);
-    }
-
-    public List<Item> findPagesBySiteAndUriStartingWith(Site site, String path) {
-        return itemRepository.findBySiteAndUriStartingWithAndPageIsTrue(site, path);
-    }
-
-//    public Slice<Page> findPagesByHostAndUriLike(Site site, String path, int offset, int limit) {
-//        return pageRepository.findBySiteAndUriLike(site, path, PageRequest.of(offset, limit));
+//    private static HttpServletRequest currentRequest() {
+//        return ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+//    }
+//
+//    private static Site currentSite() {
+//        HttpServletRequest request = currentRequest();
+//        ApplicationContext applicationContext = WebApplicationContextUtils
+//                .findWebApplicationContext(request.getServletContext());
+//        SiteService siteService = applicationContext.getBean(SiteService.class);
+//        return siteService.findSiteByRequest(request);
 //    }
 
-    public Item findPageByRequest(HttpServletRequest request) {
-        Site site = siteService.findSiteByRequest(request);
-        UrlPathHelper pathHelper = getPathHelper();
-
-        String uri = pathHelper.getRequestUri(request);
+    @Cacheable(cacheNames = {ITEM_BY_URI_CACHE}, key = "#root.args[1]")
+    public Item findItemBySiteAndUri(Site site, String uri) {
         if (uri.equals("/")) {
-            uri = site.getHome();
+            return findItemBySiteAndUri(site, site.getHome());
         }
 
-        return findPageBySiteAndUri(site, uri);
+        return site.getPages().stream()
+                .filter(it -> uri.equals(it.getUri()))
+                .findFirst().orElse(null);
     }
 
-    public void savePage(Item item) {
-        itemRepository.saveAndFlush(item);
+    public Item findItemByRequestAndUri(HttpServletRequest request, String uri) {
+        Site site = siteService.findSiteByRequest(request);
+        if (site == null) {
+            throw new RuntimeException("No site available");
+        }
+        return self.findItemBySiteAndUri(site, uri);
     }
 
-    public void deletePage(Item item) {
-        itemRepository.delete(item);
-    }
+//    @Cacheable(cacheNames = {ITEM_BY_PATH_CACHE})
+//    public Item findItemByUri(String path) {
+//        Site site = currentSite();
+//        return findItemBySiteAndUri(site, path);
+//    }
 
-    private <K> Map<K, Object> createMap(){
+    private <K> Map<K, Object> createMap() {
         return LazyMap.lazyMap(new LinkedHashMap<K, Object>() {
             @Override
             public boolean containsKey(Object key) {
@@ -88,51 +83,42 @@ public class ItemService {
         }, this::createMap);
     }
 
-    private Map<String, Object> toMap(Fragment fragment, String fragmentName, Map<String, Object> parent, int index) {
+    public Map<String, Object> toMap(Payload payload) {
         Map<String, Object> map = createMap();
 
-        map.put("#index", index);
-        map.put("#name", fragmentName);
-        map.put("#value", fragment.getText());
-        map.put("#attributes", fragment.getAttributes());
+        map.put("#name", Optional.ofNullable(payload.getOwner()).map(Payload.Sequence::getName).orElse(null));
+        map.put("#value", payload instanceof Text ? ((Text) payload).getValue() : null);
 
         List<Object> children = new ArrayList<>();
         map.put("#children", children);
 
-        for (Map.Entry<String, Fragment> entry : fragment.getChildren().entrySet()) {
-            Map<Object, Object> values = createMap();
-            int i = 0;
-            String childName = entry.getKey();
-            Fragment child = entry.getValue();
-            while (child != null) {
-                Map<String, Object> childMap = toMap(child, childName, map, i);
-                if (i == 0) {
-                    values.putAll(childMap);
-                }
-                values.put(Integer.toString(i++), childMap);
-                child = child.getNext();
-            }
+        if (payload instanceof Fragment) {
+            for (Payload.Sequence sequence : ((Fragment) payload).getSequences()) {
+                Map<Object, Object> values = createMap();
+                int i = 0;
+                String childName = sequence.getName();
 
-            map.put(childName, values);
-            children.add(values);
+                for (Payload child : sequence.getPayloads()) {
+                    Map<String, Object> childMap = toMap(child);
+                    if (i == 0) {
+                        values.putAll(childMap);
+                    }
+                    values.put(Integer.toString(i++), childMap);
+                }
+
+                map.put(childName, values);
+                children.add(values);
+            }
         }
 
-        map.put("#parent", new AbstractMapDecorator<String, Object>(parent) {
-            @Override
-            public String toString() {
-                Map<String, Object> decorated = decorated();
-                return decorated.getClass().getName() + '@' + System.identityHashCode(decorated);
-            }
-        });
+//        map.put("#parent", new AbstractMapDecorator<String, Object>(parent) {
+//            @Override
+//            public String toString() {
+//                Map<String, Object> decorated = decorated();
+//                return decorated.getClass().getName() + '@' + System.identityHashCode(decorated);
+//            }
+//        });
 
         return map;
-    }
-
-    private Map<String, Object> toMap(Fragment fragment, String fragmentName) {
-        return toMap(fragment, fragmentName, Collections.emptyMap(), 0);
-    }
-
-    public Map<String, Object> toMap(Item item) {
-        return toMap(item, item.getType());
     }
 }

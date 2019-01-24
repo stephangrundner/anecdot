@@ -5,14 +5,12 @@ import info.anecdot.content.SiteService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
-import org.springframework.util.AntPathMatcher;
 import org.springframework.web.servlet.resource.AbstractResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -28,10 +26,23 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         this.applicationContext = applicationContext;
     }
 
-    private boolean isHidden(Site site, String requestPath) {
-        AntPathMatcher pathMatcher = new AntPathMatcher();
-        Set<String> hidden = site.getHidden();
-        return hidden.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestPath));
+//    private boolean isHidden(Site site, String requestPath) {
+//        AntPathMatcher pathMatcher = new AntPathMatcher();
+//        Set<String> hidden = site.getHidden();
+//        return hidden.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestPath));
+//    }
+
+    private String ensureTrailingSlash(String uri) {
+        if (!uri.endsWith("/")) {
+            return uri + "/";
+        }
+
+        return uri;
+    }
+
+    private Resource toFileResource(Path path) {
+        String location = "file:" + path.toString();
+        return applicationContext.getResource(ensureTrailingSlash(location));
     }
 
     @Override
@@ -39,29 +50,16 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         SiteService siteService = applicationContext.getBean(SiteService.class);
         Site site = siteService.findSiteByRequest(request);
 
-        if (isHidden(site, requestPath)) {
-            return null;
-        }
+//        if (isHidden(site, requestPath)) {
+//            return null;
+//        }
 
-        Path directory = site.getContent();
-        locations =
-                Stream.concat(Stream.of("./")
-                                .map(directory::resolve)
-                                .map(it -> {
-                                    String location = "file:" + it.toString();
-                                    if (!location.endsWith("/")) {
-                                        location += "/";
-                                    }
+        locations = Stream.concat(
+                Stream.of(site.getBase()).map(this::toFileResource),
+                Stream.of(site.getTheme()).map(this::toFileResource))
+                .collect(Collectors.toList());
 
-                                    return applicationContext.getResource(location);
-                                }),
-                        Stream.of("file:./themes/dark/")
-                                .map(it -> applicationContext.getResource(it)))
-                        .collect(Collectors.toList());
-
-        Resource result = chain.resolveResource(request, requestPath, locations);
-
-        return result;
+        return chain.resolveResource(request, requestPath, locations);
     }
 
     @Override
