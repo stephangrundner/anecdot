@@ -1,5 +1,10 @@
 package info.anecdot.content;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 /**
  * @author Stephan Grundner
  */
@@ -9,6 +14,10 @@ public class Item extends Fragment {
     private String uri;
     private String type;
     private boolean page = true;
+
+    private LocalDate date;
+
+    private final Set<String> tags = new LinkedHashSet<>();
 
     public Site getSite() {
         return site;
@@ -40,5 +49,17 @@ public class Item extends Fragment {
 
     public void setPage(boolean page) {
         this.page = page;
+    }
+
+    public LocalDate getDate() {
+        return date;
+    }
+
+    public void setDate(LocalDate date) {
+        this.date = date;
+    }
+
+    public Set<String> getTags() {
+        return tags;
     }
 }

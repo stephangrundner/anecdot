@@ -9,7 +9,7 @@ import java.util.*;
 public class Site {
 
     private final Set<String> hosts = new LinkedHashSet<>();
-    private final Map<String, Item> pages = new LinkedHashMap<>();
+    private final Map<String, Item> items = new LinkedHashMap<>();
 
     private Path base;
     private Path theme;
@@ -20,21 +20,17 @@ public class Site {
         return hosts;
     }
 
-    public Collection<Item> getPages() {
-        return Collections.unmodifiableCollection(pages.values());
+    public Collection<Item> getItems() {
+        return Collections.unmodifiableCollection(items.values());
     }
 
-//    public Set<String> getFiles() {
-//        return Collections.unmodifiableSet(pages.keySet());
-//    }
-
-    public Item getPage(Path file) {
-        return pages.get(file);
+    public Item getItem(Path file) {
+        return items.get(file);
     }
 
-    public Item putPage(Item item) {
+    public Item putItem(Item item) {
         String path = item.getUri();
-        Item replaced = pages.put(path, item);
+        Item replaced = items.put(path, item);
         if (replaced != null) {
             replaced.setSite(null);
         }

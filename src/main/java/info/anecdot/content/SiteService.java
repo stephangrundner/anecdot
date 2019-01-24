@@ -6,7 +6,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
-import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.MutablePropertySources;
 import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.core.env.PropertyResolver;
@@ -51,9 +50,6 @@ public class SiteService {
     }
 
     private final Set<Site> sites = new LinkedHashSet<>();
-
-    @Autowired
-    private ApplicationContext applicationContext;
 
     @Autowired
     private ResourceLoader resourceLoader;

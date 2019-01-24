@@ -57,9 +57,9 @@ public class DirectoryObserver {
     }
 
     public void start(Path directory) {
-        observe(directory);
-
         try {
+            observe(directory);
+
             WatchKey key;
 
             while ((key = watchService.take()) != null) {
@@ -115,21 +115,17 @@ public class DirectoryObserver {
                         }
 
                     } catch (Exception e) {
-                        try {
-                            error(key, event, e);
-                        } catch (Exception uncaught) {
-                            LOG.error("Uncaught exception", uncaught);
-                        }
+                        error(key, event, e);
                     } finally {
                         key.reset();
                     }
                 }
             }
-
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
         } catch (ClosedWatchServiceException e) {
             LOG.info("Stopped observing {}", directory);
+        } catch (Exception e) {
+            LOG.error("Uncaught exception", e);
+            throw new RuntimeException(e);
         }
     }
 

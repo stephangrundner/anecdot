@@ -37,38 +37,27 @@ public class ObservationService {
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     private boolean accept(Path path) {
-        try {
-            String fileName = path.getFileName().toString();
-            String extension = FilenameUtils.getExtension(fileName);
-            return !fileName.startsWith(".") && "xml".equals(extension);
+        String fileName = path.getFileName().toString();
+        String extension = FilenameUtils.getExtension(fileName);
+        return !fileName.startsWith(".") && "xml".equals(extension);
 //            TODO Also check if file is not ignored by .pageignore file!
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 
-    protected void reload(Site site, Path file) {
-        try {
-            if (!accept(file)) {
-                LOG.info("Ignoring {}", file);
-                return;
-            }
-
-            Item item = itemLoader.loadItem(site.getBase(), file);
-            site.putPage(item);
-
-            Cache cache = cacheManager.getCache(ItemService.ITEM_BY_URI_CACHE);
-            cache.evict(item.getUri());
-            if (item.getUri().equals(site.getHome())) {
-                cache.evict("/");
-            }
-
-            LOG.info("Reloaded file {}", file);
-
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+    protected void reload(Site site, Path file) throws Exception {
+        if (!accept(file)) {
+            return;
         }
+
+        Item item = itemLoader.loadItem(site.getBase(), file);
+        site.putItem(item);
+
+        Cache cache = cacheManager.getCache(ItemService.ITEM_BY_URI_CACHE);
+        cache.evict(item.getUri());
+        if (item.getUri().equals(site.getHome())) {
+            cache.evict("/");
+        }
+
+        LOG.info("Reloaded file {}", file);
     }
 
     public void start(Site site) throws IOException {
@@ -79,7 +68,11 @@ public class ObservationService {
         DirectoryObserver observer = new DirectoryObserver() {
             @Override
             protected void visited(Path file) {
-                reload(site, file);
+                try {
+                    reload(site, file);
+                } catch (Exception e) {
+                    LOG.error("Error while reloading file " + file, e);
+                }
             }
 
             @Override
@@ -95,7 +88,6 @@ public class ObservationService {
             @Override
             protected void deleted(Path path, boolean file) {
                 if (!accept(path)) {
-                    LOG.info("Ignoring {}", file);
                     return;
                 }
 

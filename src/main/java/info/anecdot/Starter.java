@@ -4,7 +4,10 @@ import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.FileObserver;
 import info.anecdot.content.SiteService;
-import info.anecdot.servlet.*;
+import info.anecdot.servlet.PebbleLoaderDecorator;
+import info.anecdot.servlet.RequestInterceptor;
+import info.anecdot.servlet.ResourceResolverDispatcher;
+import info.anecdot.servlet.ThumborRunner;
 import org.apache.catalina.connector.Connector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,8 +27,11 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
+import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.annotation.Scope;
+import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.Environment;
+import org.springframework.core.env.PropertiesPropertySource;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -40,43 +46,14 @@ import java.util.concurrent.Executors;
 @SpringBootApplication
 @EnableCaching
 @EnableScheduling
-@PropertySource("anecdot.properties")
+@PropertySources({
+        @PropertySource("default.properties"),
+        @PropertySource(ignoreResourceNotFound = true, value = {
+                "file:./anecdot.properties",
+                "file:/etc/anecdot/anecdot.properties"})})
 public class Starter implements ApplicationRunner, WebMvcConfigurer {
 
     private static final Logger LOG = LoggerFactory.getLogger(Starter.class);
-
-//    private static <T> List<T> getProperties(PropertyResolver propertyResolver, ConversionService conversionService, String key, Class<T> targetElementType) {
-//        class StringArrayList extends ArrayList<T> {
-//            public StringArrayList() { }
-//        }
-//
-//        return propertyResolver.getProperty(key, StringArrayList.class).stream()
-//                .map(it -> conversionService.convert(it, targetElementType))
-//                .collect(Collectors.toList());
-//    }
-//
-//    public static <T> List<T> getProperties(ApplicationContext applicationContext, String key, Class<T> targetElementType) {
-//        Environment environment = applicationContext.getEnvironment();
-//        ConversionService conversionService = applicationContext.getBean(ConversionService.class);
-//        return getProperties(environment, conversionService, key, targetElementType);
-//    }
-//
-//    private static List<String> getProperties(Environment environment, String key, List<String> defaultValues) {
-//        class StringArrayList extends ArrayList<String> {
-//            private StringArrayList(Collection<? extends String> c) {
-//                super(c);
-//            }
-//
-//            public StringArrayList() {
-//            }
-//        }
-//
-//        return environment.getProperty(key, StringArrayList.class, new StringArrayList(defaultValues));
-//    }
-//
-//    public static List<String> getProperties(Environment environment, String key) {
-//        return getProperties(environment, key, Collections.emptyList());
-//    }
 
     private static boolean init = false; {
         if (init) {
@@ -112,11 +89,6 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
     }
 
     @Bean
-    protected ThumborRequestInterceptor thumborRequestInterceptor() {
-        return new ThumborRequestInterceptor();
-    }
-
-    @Bean
     @ConditionalOnMissingBean
     protected ThumborRunner thumborRunner() {
         return new ThumborRunner();
@@ -127,11 +99,6 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
         RequestInterceptor requestInterceptor =
                 applicationContext.getBean(RequestInterceptor.class);
         registry.addInterceptor(requestInterceptor).order(0);
-
-        ThumborRequestInterceptor thumborRequestInterceptor =
-                applicationContext.getBean(ThumborRequestInterceptor.class);
-        registry.addInterceptor(thumborRequestInterceptor)
-                .order(1);
     }
 
     @Bean
@@ -174,7 +141,9 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
                     modified(file);
                 }
             };
-            Path file = Paths.get("./sites.properties");
+            Environment environment = applicationContext.getEnvironment();
+            String filePath = environment.getProperty("anecdot.sites.properties");
+            Path file = Paths.get(filePath);
             try {
                 siteService.reloadProperties(file);
             } catch (Exception e) {

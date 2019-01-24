@@ -17,15 +17,6 @@ import java.nio.file.Path;
  */
 public class PebbleLoaderDecorator implements Loader<String> {
 
-    private static HttpServletRequest currentRequest() {
-        RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
-        if (requestAttributes instanceof ServletRequestAttributes) {
-            return ((ServletRequestAttributes) requestAttributes).getRequest();
-        }
-
-        return null;
-    }
-
     @Autowired
     private SiteService siteService;
 
@@ -33,7 +24,9 @@ public class PebbleLoaderDecorator implements Loader<String> {
 
     @Override
     public Reader getReader(String templateName) {
-        HttpServletRequest request = currentRequest();
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
+                .getRequest();
+
         Site site = siteService.findSiteByRequest(request);
         Path directory = site.getTheme();
 

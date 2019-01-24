@@ -2,7 +2,6 @@ package info.anecdot.servlet;
 
 import info.anecdot.content.Item;
 import info.anecdot.content.ItemService;
-import info.anecdot.content.SiteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,13 +19,19 @@ public class RequestInterceptor implements HandlerInterceptor {
     private static final Logger LOG = LoggerFactory.getLogger(RequestInterceptor.class);
 
     @Autowired
-    private SiteService siteService;
+    private ThumborRunner thumborRunner;
 
     @Autowired
     private ItemService itemService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        if (request.getParameter("size") != null) {
+            thumborRunner.process(request, response);
+
+            return false;
+        }
+
         Item item = itemService.findItemByRequestAndUri(request, request.getRequestURI());
 
         if (item != null) {
