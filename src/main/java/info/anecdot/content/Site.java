@@ -1,43 +1,55 @@
 package info.anecdot.content;
 
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
 import java.nio.file.Path;
-import java.util.*;
+import java.nio.file.Paths;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 /**
  * @author Stephan Grundner
  */
+@Document
 public class Site {
 
-    private final Set<String> hosts = new LinkedHashSet<>();
-    private final Map<String, Item> items = new LinkedHashMap<>();
+//    @Id
+//    private String id;
+
+    @Id
+//    @Indexed(unique = true)
+    private String host;
+
+    private Set<String> aliases = new LinkedHashSet<>();
 
     private Path base;
-    private Path theme;
+    private String theme;
 
     private String home;
 
-    public Set<String> getHosts() {
-        return hosts;
+//    public String getId() {
+//        return id;
+//    }
+//
+//    public void setId(String id) {
+//        this.id = id;
+//    }
+
+    public String getHost() {
+        return host;
     }
 
-    public Collection<Item> getItems() {
-        return Collections.unmodifiableCollection(items.values());
+    public void setHost(String host) {
+        this.host = host;
     }
 
-    public Item getItem(Path file) {
-        return items.get(file);
+    public Set<String> getAliases() {
+        return aliases;
     }
 
-    public Item putItem(Item item) {
-        String path = item.getUri();
-        Item replaced = items.put(path, item);
-        if (replaced != null) {
-            replaced.setSite(null);
-        }
-
-        item.setSite(this);
-
-        return replaced;
+    public void setAliases(Set<String> aliases) {
+        this.aliases = aliases;
     }
 
     public Path getBase() {
@@ -46,14 +58,16 @@ public class Site {
 
     public void setBase(Path base) {
         this.base = base;
+//        this.base = base.toString();
     }
 
     public Path getTheme() {
-        return theme;
+        return Paths.get(theme);
     }
 
     public void setTheme(Path theme) {
-        this.theme = theme;
+//        this.theme = theme;
+        this.theme = theme.toString();
     }
 
     public String getHome() {

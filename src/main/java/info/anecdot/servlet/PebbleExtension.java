@@ -38,11 +38,12 @@ public class PebbleExtension extends AbstractExtension {
 
         @Override
         public Object execute(Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) {
+
             SiteService siteService = applicationContext.getBean(SiteService.class);
             Site site = siteService.findSiteByRequest(currentRequest());
-            Stream<Item> stream = site.getItems().stream();
 
             ItemService itemService = applicationContext.getBean(ItemService.class);
+            Stream<Item> stream = itemService.findItemsBySite(site).stream();
 
             String uri = (String) args.get("uri");
             if (StringUtils.hasText(uri)) {

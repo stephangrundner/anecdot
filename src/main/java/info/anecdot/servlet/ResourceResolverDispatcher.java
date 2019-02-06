@@ -2,9 +2,11 @@ package info.anecdot.servlet;
 
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.core.io.Resource;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.resource.AbstractResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
@@ -26,12 +28,6 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         this.applicationContext = applicationContext;
     }
 
-//    private boolean isHidden(Site site, String requestPath) {
-//        AntPathMatcher pathMatcher = new AntPathMatcher();
-//        Set<String> hidden = site.getHidden();
-//        return hidden.stream().anyMatch(pattern -> pathMatcher.match(pattern, requestPath));
-//    }
-
     private String ensureTrailingSlash(String uri) {
         if (!uri.endsWith("/")) {
             return uri + "/";
@@ -50,9 +46,10 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         SiteService siteService = applicationContext.getBean(SiteService.class);
         Site site = siteService.findSiteByRequest(request);
 
-//        if (isHidden(site, requestPath)) {
-//            return null;
-//        }
+        String name = FilenameUtils.getName(requestPath);
+        if (StringUtils.startsWithIgnoreCase(name, ".")) {
+            return null;
+        }
 
         locations = Stream.concat(
                 Stream.of(site.getBase()).map(this::toFileResource),

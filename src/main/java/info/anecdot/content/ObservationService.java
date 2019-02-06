@@ -1,5 +1,6 @@
 package info.anecdot.content;
 
+import info.anecdot.security.SecurityService;
 import org.apache.commons.io.FilenameUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,7 +33,13 @@ public class ObservationService {
     private ItemLoader itemLoader;
 
     @Autowired
+    private ItemService itemService;
+
+    @Autowired
     private CacheManager cacheManager;
+
+    @Autowired
+    private SecurityService securityService;
 
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
@@ -44,12 +51,18 @@ public class ObservationService {
     }
 
     protected void reload(Site site, Path file) throws Exception {
+        if (".access".equals(file.getFileName().toString())) {
+            securityService.reloadRestriction(site, file);
+            return;
+        }
+
         if (!accept(file)) {
             return;
         }
 
         Item item = itemLoader.loadItem(site.getBase(), file);
-        site.putItem(item);
+        item.setSite(site);
+        item = itemService.saveItem(site, item);
 
         Cache cache = cacheManager.getCache(ItemService.ITEM_BY_URI_CACHE);
         cache.evict(item.getUri());

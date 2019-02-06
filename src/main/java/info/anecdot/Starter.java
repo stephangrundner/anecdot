@@ -3,6 +3,8 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.FileObserver;
+import info.anecdot.content.PathReadingConverter;
+import info.anecdot.content.PathWritingConverter;
 import info.anecdot.content.SiteService;
 import info.anecdot.servlet.PebbleLoaderDecorator;
 import info.anecdot.servlet.RequestInterceptor;
@@ -29,9 +31,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.PropertySource;
 import org.springframework.context.annotation.PropertySources;
 import org.springframework.context.annotation.Scope;
-import org.springframework.core.env.ConfigurableEnvironment;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.core.env.Environment;
-import org.springframework.core.env.PropertiesPropertySource;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.MongoCustomConversions;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -41,6 +44,8 @@ import java.nio.file.FileSystems;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.WatchService;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Executors;
 
 @SpringBootApplication
@@ -111,11 +116,6 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
         ResourceResolverDispatcher resourceResolverDispatcher =
                 applicationContext.getBean(ResourceResolverDispatcher.class);
 
-        Environment environment = applicationContext.getEnvironment();
-        String themeDirectory = environment.getProperty("anecdot.theme-directory", "/theme");
-        registry.addResourceHandler("/**")
-                .addResourceLocations("file:" + themeDirectory);
-
         registry.addResourceHandler("/**")
                 .resourceChain(false)
                 .addResolver(resourceResolverDispatcher);
@@ -151,6 +151,16 @@ public class Starter implements ApplicationRunner, WebMvcConfigurer {
             }
             propertiesObserver.observe(file);
         });
+    }
+
+    @Bean
+    public MongoCustomConversions customConversions() {
+        List<Converter<?, ?>> converters = new ArrayList<>();
+        converters.add(new PathReadingConverter());
+        converters.add(new PathWritingConverter());
+        MongoCustomConversions customConversions = new MongoCustomConversions(converters);
+
+        return customConversions;
     }
 
     public static void main(String[] args) {

@@ -1,5 +1,7 @@
 package info.anecdot.content;
 
+import org.springframework.data.annotation.Transient;
+
 import java.util.*;
 
 /**
@@ -9,10 +11,11 @@ public abstract class Payload {
 
     public static class Sequence {
 
+        @Transient
         private Fragment owner;
         private String name;
 
-        private final List<Payload> payloads = new ArrayList<>();
+        private List<Payload> payloads = new ArrayList<>();
 
         public Fragment getOwner() {
             return owner;
@@ -34,6 +37,10 @@ public abstract class Payload {
             return Collections.unmodifiableList(payloads);
         }
 
+        public void setPayloads(List<Payload> payloads) {
+            this.payloads = payloads;
+        }
+
         public void addPayload(Payload payload) {
             if (payloads.add(payload)) {
                 payload.setOwner(this);
@@ -41,9 +48,10 @@ public abstract class Payload {
         }
     }
 
+    @Transient
     private Sequence owner;
 
-    private final Map<String, String> attributes = new LinkedHashMap<>();
+    private Map<String, String> attributes = new LinkedHashMap<>();
 
     public Sequence getOwner() {
         return owner;
@@ -55,5 +63,9 @@ public abstract class Payload {
 
     public Map<String, String> getAttributes() {
         return attributes;
+    }
+
+    public void setAttributes(Map<String, String> attributes) {
+        this.attributes = attributes;
     }
 }

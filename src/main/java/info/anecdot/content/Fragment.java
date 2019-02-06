@@ -7,7 +7,7 @@ import java.util.*;
  */
 public class Fragment extends Payload {
 
-    private final Map<String, Sequence> sequences = new LinkedHashMap<>();
+    private Map<String, Sequence> sequences = new LinkedHashMap<>();
 
     public Set<String> getSequenceNames() {
         return Collections.unmodifiableSet(sequences.keySet());
@@ -15,6 +15,10 @@ public class Fragment extends Payload {
 
     public Collection<Sequence> getSequences() {
         return Collections.unmodifiableCollection(sequences.values());
+    }
+
+    public void setSequences(Map<String, Sequence> sequences) {
+        this.sequences = sequences;
     }
 
     public Sequence getSequence(String name) {

@@ -10,7 +10,6 @@ import org.springframework.util.AntPathMatcher;
 import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * @author Stephan Grundner
@@ -20,6 +19,9 @@ public class ItemService {
 
     public static final String ITEM_BY_URI_CACHE = "itemByUri";
     public static final String ITEMS_BY_TAGS_CACHE = "itemsByTags";
+
+    @Autowired
+    private ItemRepository itemRepository;
 
     @Autowired
     private SiteService siteService;
@@ -37,6 +39,10 @@ public class ItemService {
         return pathMatcher;
     }
 
+    public List<Item> findItemsBySite(Site site) {
+        return itemRepository.findAllBySite(site);
+    }
+
     public Predicate<? super Item> filterByUri(String uri) {
         return it -> getPathMatcher().match(uri, it.getUri());
     }
@@ -47,9 +53,10 @@ public class ItemService {
             return findItemBySiteAndUri(site, site.getHome());
         }
 
-        return site.getItems().stream()
-                .filter(filterByUri(uri))
-                .findFirst().orElse(null);
+//        return site.getItems().stream()
+//                .filter(filterByUri(uri))
+//                .findFirst().orElse(null);
+        return itemRepository.findBySiteAndUri(site, uri);
     }
 
     private Site getSiteForRequest(HttpServletRequest request) {
@@ -85,16 +92,26 @@ public class ItemService {
 
     @Cacheable(cacheNames = {ITEMS_BY_TAGS_CACHE}, key = "#root.args[1]")
     public Set<Item> findItemsBySiteAndTags(Site site, Collection<String> tags) {
-        Set<Item> items = site.getItems().stream()
-                .filter(filterByTags(tags))
-                .collect(Collectors.toCollection(LinkedHashSet::new));
-
-        return Collections.unmodifiableSet(items);
+//        Set<Item> items = site.getItems().stream()
+//                .filter(filterByTags(tags))
+//                .collect(Collectors.toCollection(LinkedHashSet::new));
+//
+//        return Collections.unmodifiableSet(items);
+        return itemRepository.findAllBySiteAndTags(site, tags);
     }
 
     public Set<Item> findItemsByRequestAndTags(HttpServletRequest request, Collection<String> tags) {
         Site site = getSiteForRequest(request);
         return self.findItemsBySiteAndTags(site, tags);
+    }
+
+    public Item saveItem(Site site, Item item) {
+//        Item existing = itemRepository.findBySiteAndUri(site, item.getUri());
+//        if (existing != null) {
+//            item.setId(existing.getId());
+//        }
+
+        return itemRepository.save(item);
     }
 
     private <K> Map<K, Object> createMap() {
