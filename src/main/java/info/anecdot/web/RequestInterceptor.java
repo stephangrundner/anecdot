@@ -35,17 +35,16 @@ public class RequestInterceptor implements HandlerInterceptor {
 
         String requestUri = new UrlPathHelper().getRequestUri(request);
         if (!requestUri.startsWith("/theme/")) {
+            Item item = itemService.findItemByRequestAndUri(request, request.getRequestURI());
 
-        }
-        Item item = itemService.findItemByRequestAndUri(request, request.getRequestURI());
+            if (item != null) {
+                request.setAttribute(Item.class.getName(), item);
+                RequestDispatcher dispatcher = request.getServletContext()
+                        .getRequestDispatcher("/item?uri=" + item.getUri());
+                dispatcher.forward(request, response);
 
-        if (item != null) {
-            request.setAttribute(Item.class.getName(), item);
-            RequestDispatcher dispatcher = request.getServletContext()
-                    .getRequestDispatcher("/item?uri=" + item.getUri());
-            dispatcher.forward(request, response);
-
-            return false;
+                return false;
+            }
         }
 
         return true;

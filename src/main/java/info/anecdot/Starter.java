@@ -120,8 +120,8 @@ public class Starter implements ApplicationRunner {
         protected void configure(HttpSecurity http) throws Exception {
             super.configure(http);
             http.authorizeRequests()
-                    .anyRequest()//.permitAll();
-                    .access("@securityService.hasAccess()");
+                    .antMatchers("/theme/**").permitAll()
+                    .anyRequest().access("@securityService.hasAccess()");
         }
     }
 
