@@ -1,9 +1,8 @@
 package info.anecdot.security;
 
+import info.anecdot.xml.DomSupport;
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
-import info.anecdot.xml.Nodes;
-import info.anecdot.xml.XPathHelper;
 import org.apache.commons.io.FilenameUtils;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
@@ -27,6 +26,8 @@ import org.w3c.dom.NodeList;
 import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,30 +42,36 @@ import java.util.stream.Collectors;
  * @author Stephan Grundner
  */
 @Service
-public class SecurityService {
+public class SecurityService implements DomSupport {
+
+    private final XPath xPath = XPathFactory.newInstance().newXPath();
 
     @Autowired
     private SiteService siteService;
 
     private Map<String, Access> accessMap = new ConcurrentSkipListMap<>();
 
+    @Override
+    public XPath getXPath() {
+        return xPath;
+    }
+
     public void reloadRestriction(Site site, Path file)  {
-        XPathHelper xPathHelper = new XPathHelper();
         try {
             DocumentBuilder parser = DocumentBuilderFactory.newInstance().newDocumentBuilder();
             try (InputStream inputStream = Files.newInputStream(file)) {
                 Document document = parser.parse(inputStream);
-                NodeList restrictionNodes = xPathHelper.nodeList("/access/*", document);
+                NodeList restrictionNodes = nodeList("/access/*", document);
 
                 List<Permission> permissions = new ArrayList<>();
-                Nodes.stream(restrictionNodes).forEach(node -> {
+                DomSupport.nodes(restrictionNodes).forEach(node -> {
                     String pattern = ((Element) node).getAttribute("pattern");
-                    NodeList authorityNodes = xPathHelper.nodeList("authority", node);
-                    List<String> authorities = Nodes.stream(authorityNodes)
+                    NodeList authorityNodes = nodeList("authority", node);
+                    List<String> authorities = DomSupport.nodes(authorityNodes)
                             .map(it -> "ROLE_" + it.getTextContent())
                             .collect(Collectors.toList());
 
-                    List<String> users = Nodes.stream(xPathHelper.nodeList("user", node))
+                    List<String> users = nodes("user", node)
                             .map(Node::getTextContent)
                             .collect(Collectors.toList());
 
