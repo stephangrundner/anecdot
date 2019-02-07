@@ -39,12 +39,13 @@ public class SiteObserver extends AbstractDirectoryObserver {
     }
 
     private void reload(Path file) throws Exception {
-        if (".access".equals(file.getFileName().toString())) {
+        String fileName = file.getFileName().toString();
+        if (".access".equals(fileName)) {
             securityService.reloadRestriction(site, file);
             return;
         }
 
-        if (!file.toString().endsWith(".xml")) {
+        if (!fileName.endsWith(".xml")) {
             LOG.info("Ignoring " + file);
 
             return;
