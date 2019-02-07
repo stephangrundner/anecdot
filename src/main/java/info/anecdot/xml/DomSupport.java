@@ -7,7 +7,6 @@ import org.w3c.dom.NodeList;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpressionException;
-import javax.xml.xpath.XPathFactory;
 import java.util.Iterator;
 import java.util.Spliterators;
 import java.util.stream.Stream;
@@ -18,7 +17,7 @@ import java.util.stream.StreamSupport;
  */
 public interface DomSupport {
 
-    public static class NodeListIterator implements Iterator<Node> {
+    class NodeListIterator implements Iterator<Node> {
 
         private final NodeList nodeList;
         private int i = 0;
@@ -38,7 +37,7 @@ public interface DomSupport {
         }
     }
 
-    public static class NamedNodeMapIterator implements Iterator<Node> {
+    class NamedNodeMapIterator implements Iterator<Node> {
 
         private final NamedNodeMap namedNodeMap;
         private int i = 0;
@@ -57,8 +56,6 @@ public interface DomSupport {
             this.namedNodeMap = namedNodeMap;
         }
     }
-
-//    private XPath xPath;
 
     static Stream<Node> nodes(NodeList nodes) {
         NodeListIterator nodeListIterator = new NodeListIterator(nodes);
@@ -85,12 +82,4 @@ public interface DomSupport {
     default Stream<Node> nodes(String expression, Object source) {
         return nodes(nodeList(expression, source));
     }
-
-//    protected DomSupport(XPath xPath) {
-//        this.xPath = xPath;
-//    }
-//
-//    protected DomSupport() {
-//        this(XPathFactory.newInstance().newXPath());
-//    }
 }
