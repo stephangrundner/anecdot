@@ -1,4 +1,4 @@
-package info.anecdot.servlet;
+package info.anecdot.web;
 
 import com.mitchellbosecke.pebble.extension.AbstractExtension;
 import com.mitchellbosecke.pebble.extension.Function;
@@ -8,14 +8,11 @@ import info.anecdot.content.Item;
 import info.anecdot.content.ItemService;
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
 import org.springframework.expression.spel.standard.SpelExpressionParser;
 import org.springframework.expression.spel.support.StandardEvaluationContext;
-import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -27,7 +24,6 @@ import java.util.stream.Stream;
 /**
  * @author Stephan Grundner
  */
-@Component
 public class PebbleExtension extends AbstractExtension {
 
     private HttpServletRequest currentRequest() {
@@ -40,41 +36,43 @@ public class PebbleExtension extends AbstractExtension {
         public Object execute(Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) {
 
             SiteService siteService = applicationContext.getBean(SiteService.class);
-            Site site = siteService.findSiteByRequest(currentRequest());
+
 
             ItemService itemService = applicationContext.getBean(ItemService.class);
-            Stream<Item> stream = itemService.findItemsBySite(site).stream();
+//            Site site = siteService.findSiteByRequest(currentRequest());
+            String host = currentRequest().getServerName();
+            Stream<Item> stream = itemService.findItemsByHost(host).stream();
 
-            String uri = (String) args.get("uri");
-            if (StringUtils.hasText(uri)) {
-                stream = stream.filter(itemService.filterByUri(uri));
-            }
+//            String uri = (String) args.get("uri");
+//            if (StringUtils.hasText(uri)) {
+//                stream = stream.filter(itemService.filterByUri(uri));
+//            }
+//
+//            String tags = (String) args.get("tags");
+//            if (StringUtils.hasText(tags)) {
+//                stream = stream.filter(itemService.filterByTags(tags.split(",")));
+//            }
+//
+//            Object limit = args.get("limit");
+//            if (limit instanceof Number) {
+//                stream = stream.limit((long) limit);
+//            }
 
-            String tags = (String) args.get("tags");
-            if (StringUtils.hasText(tags)) {
-                stream = stream.filter(itemService.filterByTags(tags.split(",")));
-            }
-
-            Object limit = args.get("limit");
-            if (limit instanceof Number) {
-                stream = stream.limit((long) limit);
-            }
-
-            String sort = (String) args.getOrDefault("sort", "date");
-
-            String order = (String) args.get("order");
-            if (StringUtils.hasText(order)) {
-                switch (order.toLowerCase()) {
-                    case "asc":
-                        stream = stream.sorted(itemService.sortedByDate(false));
-                        break;
-                    case "desc":
-                        stream = stream.sorted(itemService.sortedByDate(true));
-                        break;
-                    default:
-                        throw new RuntimeException("Unexpectd order: " + order);
-                }
-            }
+//            String sort = (String) args.getOrDefault("sort", "date");
+//
+//            String order = (String) args.get("order");
+//            if (StringUtils.hasText(order)) {
+//                switch (order.toLowerCase()) {
+//                    case "asc":
+//                        stream = stream.sorted(itemService.sortedByDate(false));
+//                        break;
+//                    case "desc":
+//                        stream = stream.sorted(itemService.sortedByDate(true));
+//                        break;
+//                    default:
+//                        throw new RuntimeException("Unexpectd order: " + order);
+//                }
+//            }
 
             return stream.map(itemService::toMap).collect(Collectors.toList());
         }
@@ -112,8 +110,7 @@ public class PebbleExtension extends AbstractExtension {
         }
     }
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    private final ApplicationContext applicationContext;
 
     @Override
     public Map<String, Function> getFunctions() {
@@ -122,5 +119,9 @@ public class PebbleExtension extends AbstractExtension {
         functions.put("eval", new EvalFunction());
 
         return functions;
+    }
+
+    public PebbleExtension(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
     }
 }

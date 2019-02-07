@@ -1,4 +1,4 @@
-package info.anecdot.servlet;
+package info.anecdot.web;
 
 import org.apache.commons.io.IOUtils;
 import org.slf4j.Logger;
@@ -11,12 +11,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.*;
 import java.nio.file.Paths;
-import java.util.Collections;
-import java.util.List;
 
 /**
  * @author Stephan Grundner
- *
+ * <p>
  * https://github.com/thumbor/thumbor/wiki/Running
  * https://thumbor.readthedocs.io/en/latest/index.html
  * https://thumbor.readthedocs.io/en/latest/image_loader.html
@@ -26,8 +24,7 @@ public class ThumborRunner implements ApplicationRunner {
 
     private static final Logger LOG = LoggerFactory.getLogger(ThumborRunner.class);
 
-    private static boolean instantiated = false;
-    {
+    private static volatile boolean instantiated = false;{
         if (instantiated) {
             throw new IllegalStateException();
         }
@@ -41,8 +38,6 @@ public class ThumborRunner implements ApplicationRunner {
     private String loggingLevel = "DEBUG";
 
     private OutputStream outputStream = System.out;
-
-    private List<String> allowedSources = Collections.singletonList("localhost");
 
     public Integer getExitValue() {
         return exitValue;
@@ -80,16 +75,6 @@ public class ThumborRunner implements ApplicationRunner {
         this.outputStream = outputStream;
     }
 
-    public List<String> getAllowedSources() {
-        return allowedSources;
-    }
-
-    public void setAllowedSources(List<String> allowedSources) {
-        checkIfRunning();
-
-        this.allowedSources = allowedSources;
-    }
-
     private void checkIfRunning() {
         if (process != null && process.isAlive()) {
             throw new IllegalStateException("Thumbor already running");
@@ -99,14 +84,12 @@ public class ThumborRunner implements ApplicationRunner {
     protected String buildUrl(HttpServletRequest request) {
         String size = request.getParameter("size");
         String requestUrl = request.getRequestURL().toString();
-
+        requestUrl = requestUrl.replaceAll("https://", "http://");
         String url = String.format("http://localhost:%d/%s/%s/%s",
                 port,
                 "unsafe",
                 size,
                 requestUrl);
-
-        url = url.replaceAll("https://", "http://");
 
         return url;
     }
@@ -120,7 +103,6 @@ public class ThumborRunner implements ApplicationRunner {
              OutputStream outputStream = response.getOutputStream()) {
 
             IOUtils.copy(inputStream, outputStream);
-//            response.flushBuffer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -130,7 +112,7 @@ public class ThumborRunner implements ApplicationRunner {
     }
 
     @Override
-    public void run(ApplicationArguments args) throws Exception {
+    public synchronized void run(ApplicationArguments args) throws Exception {
         checkIfRunning();
 
         File configFile = File.createTempFile("thumbor", ".conf");
@@ -142,25 +124,16 @@ public class ThumborRunner implements ApplicationRunner {
             printer.printf("STORAGE='%s'\n", "thumbor.storages.file_storage");
 //            printer.printf("STORAGE_EXPIRATION_SECONDS=%d\n", 60 * 60);
 //            printer.printf("FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
-
             printer.printf("RESULT_STORAGE='%s'\n", "thumbor.result_storages.file_storage");
 //            printer.printf("RESULT_STORAGE_FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
-            printer.printf("RESULT_STORAGE_STORES_UNSAFE=%s\n", "True");
-
-//            if (allowedSources != null && !allowedSources.isEmpty()) {
-//                printer.printf("ALLOWED_SOURCES = [%s]\n", allowedSources.stream()
-//                        .map(it -> String.format("'%s'", it))
-//                        .collect(Collectors.joining(",")));
-//            }
-
-//            printer.printf("ALLOWED_SOURCES = [%s]\n", "localhost");
+            printer.printf("RESULT_STORAGE_STORES_UNSAFE=%s\n", "True");;
         }
 
         ProcessBuilder builder = new ProcessBuilder()
                 .command("thumbor",
-                "-p", Integer.toString(port),
-                "-l", loggingLevel,
-                "-c", configFile.toString());
+                        "-p", Integer.toString(port),
+                        "-l", loggingLevel,
+                        "-c", configFile.toString());
 
         File directory = Paths.get(".").toRealPath().toFile();
         builder.directory(directory);

@@ -1,9 +1,9 @@
 package info.anecdot.security;
 
-import info.anecdot.Nodes;
-import info.anecdot.XPathHelper;
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
+import info.anecdot.xml.Nodes;
+import info.anecdot.xml.XPathHelper;
 import org.apache.commons.io.FilenameUtils;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;

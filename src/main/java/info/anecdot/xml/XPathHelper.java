@@ -1,4 +1,4 @@
-package info.anecdot;
+package info.anecdot.xml;
 
 import org.w3c.dom.NodeList;
 

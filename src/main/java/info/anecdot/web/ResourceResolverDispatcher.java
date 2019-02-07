@@ -1,4 +1,4 @@
-package info.anecdot.servlet;
+package info.anecdot.web;
 
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
@@ -12,14 +12,15 @@ import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import javax.servlet.http.HttpServletRequest;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author Stephan Grundner
  */
 public class ResourceResolverDispatcher extends AbstractResourceResolver implements ApplicationContextAware {
+
+    private static final String THEME_URL_PATH_PREFIX = "theme/";
 
     private ApplicationContext applicationContext;
 
@@ -51,10 +52,12 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
             return null;
         }
 
-        locations = Stream.concat(
-                Stream.of(site.getBase()).map(this::toFileResource),
-                Stream.of(site.getTheme()).map(this::toFileResource))
-                .collect(Collectors.toList());
+        if (requestPath.startsWith(THEME_URL_PATH_PREFIX)) {
+            requestPath = requestPath.substring(THEME_URL_PATH_PREFIX.length(), requestPath.length());
+            locations = Collections.singletonList(toFileResource(site.getTheme()));
+        } else {
+            locations = Collections.singletonList(toFileResource(site.getBase()));
+        }
 
         return chain.resolveResource(request, requestPath, locations);
     }

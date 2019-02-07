@@ -2,14 +2,22 @@ package info.anecdot.content;
 
 import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.apache.commons.collections4.map.LazyMap;
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.util.AntPathMatcher;
+import org.springframework.util.StringUtils;
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Predicate;
 
 /**
  * @author Stephan Grundner
@@ -17,101 +25,133 @@ import java.util.function.Predicate;
 @Service
 public class ItemService {
 
-    public static final String ITEM_BY_URI_CACHE = "itemByUri";
-    public static final String ITEMS_BY_TAGS_CACHE = "itemsByTags";
-
     @Autowired
     private ItemRepository itemRepository;
 
     @Autowired
     private SiteService siteService;
 
-    @Autowired
-    private ItemService self;
-
-    private AntPathMatcher pathMatcher;
-
-    public AntPathMatcher getPathMatcher() {
-        if (pathMatcher == null) {
-            pathMatcher = new AntPathMatcher();
-        }
-
-        return pathMatcher;
+    public List<Item> findItemsByHost(String host) {
+        return itemRepository.findAllByHost(host);
     }
 
-    public List<Item> findItemsBySite(Site site) {
-        return itemRepository.findAllBySite(site);
-    }
-
-    public Predicate<? super Item> filterByUri(String uri) {
-        return it -> getPathMatcher().match(uri, it.getUri());
-    }
-
-    @Cacheable(cacheNames = {ITEM_BY_URI_CACHE}, key = "#root.args[1]")
-    public Item findItemBySiteAndUri(Site site, String uri) {
+    private Item findItemBySiteAndUri(Site site, String uri) {
         if (uri.equals("/")) {
-            return findItemBySiteAndUri(site, site.getHome());
+            uri = site.getHome();
         }
 
-//        return site.getItems().stream()
-//                .filter(filterByUri(uri))
-//                .findFirst().orElse(null);
-        return itemRepository.findBySiteAndUri(site, uri);
-    }
-
-    private Site getSiteForRequest(HttpServletRequest request) {
-        Site site = siteService.findSiteByRequest(request);
-        if (site == null) {
-            throw new RuntimeException("No site available");
-        }
-
-        return site;
+        return itemRepository.findByHostAndUri(site.getHost(), uri);
     }
 
     public Item findItemByRequestAndUri(HttpServletRequest request, String uri) {
-        Site site = getSiteForRequest(request);
-        return self.findItemBySiteAndUri(site, uri);
+        Site site = siteService.findSiteByRequest(request);
+        return findItemBySiteAndUri(site, uri);
     }
 
-    public Predicate<? super Item> filterByTags(Collection<String> tags) {
-        return it -> it.getTags().containsAll(tags);
-    }
-
-    public Comparator<? super Item> sortedByDate(boolean descent) {
-        Comparator<? super Item> comparator = Comparator.comparing(Item::getDate, Comparator.nullsLast(Comparator.reverseOrder()));
-        if (descent) {
-            return comparator.reversed();
+    public Item saveItem(Item item) {
+        Site site = siteService.findSiteByHost(item.getHost());
+        Item existing = findItemBySiteAndUri(site, item.getUri());
+        if (existing != null) {
+            item.setId(existing.getId());
         }
 
-        return comparator;
-    }
-
-    public Predicate<? super Item> filterByTags(String... tags) {
-        return filterByTags(Arrays.asList(tags));
-    }
-
-    @Cacheable(cacheNames = {ITEMS_BY_TAGS_CACHE}, key = "#root.args[1]")
-    public Set<Item> findItemsBySiteAndTags(Site site, Collection<String> tags) {
-//        Set<Item> items = site.getItems().stream()
-//                .filter(filterByTags(tags))
-//                .collect(Collectors.toCollection(LinkedHashSet::new));
-//
-//        return Collections.unmodifiableSet(items);
-        return itemRepository.findAllBySiteAndTags(site, tags);
-    }
-
-    public Set<Item> findItemsByRequestAndTags(HttpServletRequest request, Collection<String> tags) {
-        Site site = getSiteForRequest(request);
-        return self.findItemsBySiteAndTags(site, tags);
-    }
-
-    public Item saveItem(Site site, Item item) {
-//        Item existing = itemRepository.findBySiteAndUri(site, item.getUri());
-//        if (existing != null) {
-//            item.setId(existing.getId());
-//        }
-
         return itemRepository.save(item);
+    }
+
+    private boolean hasChildElements(Node node) {
+        NodeList children = node.getChildNodes();
+        if (children.getLength() == 0) {
+            return false;
+        }
+
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private boolean isRootNode(Node node) {
+        Node parentNode = node.getParentNode();
+        return parentNode != null && parentNode.getNodeType() == Node.DOCUMENT_NODE;
+    }
+
+    private Payload fromNode(Node node) {
+        Payload payload;
+
+        if (isRootNode(node)) {
+            Item item = new Item();
+            item.setType(node.getNodeName());
+
+            payload = item;
+        } else {
+            payload = new Payload();
+        }
+
+        if (hasChildElements(node)) {
+            NodeList children = node.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node childNode = children.item(i);
+                if (childNode.getNodeName().startsWith("#")) {
+                    continue;
+                }
+
+                String childName = childNode.getNodeName();
+                List<Payload> sequence = payload.getSequences().get(childName);
+                if (sequence == null) {
+                    sequence = new ArrayList<>();
+                    payload.getSequences().put(childName, sequence);
+                }
+                sequence.add(fromNode(childNode));
+            }
+        } else {
+            payload.setText(node.getTextContent());
+        }
+
+        NamedNodeMap attributes = node.getAttributes();
+        if (attributes != null) {
+            for (int i = 0; i < attributes.getLength(); i++) {
+                Attr attribute = (Attr) attributes.item(i);
+                payload.getAttributes().put(attribute.getName(), attribute.getValue());
+            }
+        }
+
+        return payload;
+    }
+
+    private Item loadItem(Site site, Path file) throws IOException {
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        try (InputStream inputStream = Files.newInputStream(file)) {
+            DocumentBuilder db = dbf.newDocumentBuilder();
+            Document document = db.parse(inputStream);
+            Item item = (Item) fromNode(document.getDocumentElement());
+
+            Path base = site.getBase();
+            String path = base.relativize(file).toString();
+            path = FilenameUtils.removeExtension(path);
+            if (!StringUtils.startsWithIgnoreCase(path, "/")) {
+                path = "/" + path;
+            }
+
+            item.setUri(path);
+            item.setHost(site.getHost());
+
+            return item;
+        } catch (SAXException | ParserConfigurationException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public Item loadItem(Site site, Path file, boolean save) throws IOException {
+        Item item = loadItem(site, file);
+        if (save && item != null) {
+            item = saveItem(item);
+        }
+
+        return item;
     }
 
     private <K> Map<K, Object> createMap() {
@@ -127,11 +167,11 @@ public class ItemService {
         Map<String, Object> map = createMap();
 
         map.put("#payload", payload);
-        map.put("#name", Optional.ofNullable(payload.getOwner()).map(Payload.Sequence::getName).orElse(null));
-        map.put("#value", payload instanceof Text ? ((Text) payload).getValue() : null);
-        if (payload instanceof Item) {
-            map.put("#tags", ((Item) payload).getTags());
-        }
+//        map.put("#name", Optional.ofNullable(payload.getOwner()).map(Payload.Sequence::getName).orElse(null));
+        map.put("#value", payload.getText());
+//        if (payload instanceof Item) {
+//            map.put("#tags", ((Item) payload).getTags());
+//        }
         map.put("#parent", new AbstractMapDecorator<String, Object>(parent) {
             @Override
             public String toString() {
@@ -142,24 +182,21 @@ public class ItemService {
 
         List<Object> children = new ArrayList<>();
 
-        if (payload instanceof Fragment) {
-            for (Payload.Sequence sequence : ((Fragment) payload).getSequences()) {
-                Map<Object, Object> values = createMap();
-                int i = 0;
-                String childName = sequence.getName();
+        payload.getSequences().forEach((name, sequence) -> {
+            Map<Object, Object> values = createMap();
+            int i = 0;
 
-                for (Payload child : sequence.getPayloads()) {
-                    Map<String, Object> childMap = toMap(child, map);
-                    if (i == 0) {
-                        values.putAll(childMap);
-                    }
-                    values.put(Integer.toString(i++), childMap);
+            for (Payload child : sequence) {
+                Map<String, Object> childMap = toMap(child, map);
+                if (i == 0) {
+                    values.putAll(childMap);
                 }
-
-                map.put(childName, values);
-                children.add(values);
+                values.put(Integer.toString(i++), childMap);
             }
-        }
+
+            map.put(name, values);
+            children.add(values);
+        });
 
         map.put("#children", children);
 

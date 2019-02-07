@@ -1,4 +1,4 @@
-package info.anecdot.content;
+package info.anecdot.io;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,15 +11,15 @@ import java.util.Set;
 /**
  * @author Stephan Grundner
  */
-public class DirectoryObserver {
+public abstract class AbstractDirectoryObserver implements Runnable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DirectoryObserver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractDirectoryObserver.class);
 
-    private final WatchService watchService;
+    private WatchService watchService;
 
     private final Set<WatchKey> keys = new LinkedHashSet<>();
 
-    protected void visited(Path file) { }
+    protected abstract void visited(Path file);
 
     private void observe(Path directory) {
         try {
@@ -45,20 +45,22 @@ public class DirectoryObserver {
         }
     }
 
-    protected void created(Path file) throws Exception { }
-    protected void modified(Path file) throws Exception { }
-    protected void deleted(Path path, boolean file) throws Exception { }
-    protected void overflow(WatchKey key, WatchEvent<?> event) throws Exception { }
-    protected void error(WatchKey key, WatchEvent<?> event, Exception e) { }
+    protected abstract void created(Path file) throws Exception;
+    protected abstract void modified(Path file) throws Exception;
+    protected abstract void deleted(Path path, boolean file) throws Exception;
+    protected abstract void overflow(WatchKey key, WatchEvent<?> event) throws Exception;
+    protected abstract void error(WatchKey key, WatchEvent<?> event, Exception e);
 
-    public void stop() throws IOException {
-        watchService.close();
-        keys.clear();
-    }
+    protected abstract Path getRoot();
 
-    public void start(Path directory) {
+    @Override
+    public void run() {
+        Path root = getRoot();
+
         try {
-            observe(directory);
+            FileSystem fileSystem = root.getFileSystem();
+            watchService = fileSystem.newWatchService();
+            observe(getRoot());
 
             WatchKey key;
 
@@ -121,23 +123,15 @@ public class DirectoryObserver {
                     }
                 }
             }
+
+            watchService.close();
         } catch (ClosedWatchServiceException e) {
-            LOG.info("Stopped observing {}", directory);
+            LOG.info("Stopped observing {}", root);
         } catch (Exception e) {
             LOG.error("Uncaught exception", e);
             throw new RuntimeException(e);
+        } finally {
+            keys.clear();
         }
-    }
-
-    public DirectoryObserver(WatchService watchService) {
-        this.watchService = watchService;
-    }
-
-    public DirectoryObserver(FileSystem fileSystem) throws IOException {
-        this(fileSystem.newWatchService());
-    }
-
-    public DirectoryObserver() throws IOException {
-        this(FileSystems.getDefault());
     }
 }

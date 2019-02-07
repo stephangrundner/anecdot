@@ -1,5 +1,7 @@
-package info.anecdot.content;
+package info.anecdot.web;
 
+import info.anecdot.content.Item;
+import info.anecdot.content.ItemService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,23 +10,23 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.ModelAndView;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * @author Stephan Grundner
  */
 @Controller
 @RequestMapping
-public class PageController {
-
-    @Autowired
-    private SiteService siteService;
+public class ItemController {
 
     @Autowired
     private ItemService itemService;
 
-    @GetMapping(path = "/page")
-    protected ModelAndView byId(@RequestParam(name = "uri") String uri,
+    @GetMapping(path = "/item")
+    protected ModelAndView item(@RequestParam(name = "uri") String uri,
                                 HttpServletRequest request) {
 
         ModelAndView modelAndView = new ModelAndView();

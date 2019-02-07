@@ -2,70 +2,59 @@ package info.anecdot.content;
 
 import org.springframework.data.annotation.Transient;
 
-import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author Stephan Grundner
  */
-public abstract class Payload {
-
-    public static class Sequence {
-
-        @Transient
-        private Fragment owner;
-        private String name;
-
-        private List<Payload> payloads = new ArrayList<>();
-
-        public Fragment getOwner() {
-            return owner;
-        }
-
-        public void setOwner(Fragment owner) {
-            this.owner = owner;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public List<Payload> getPayloads() {
-            return Collections.unmodifiableList(payloads);
-        }
-
-        public void setPayloads(List<Payload> payloads) {
-            this.payloads = payloads;
-        }
-
-        public void addPayload(Payload payload) {
-            if (payloads.add(payload)) {
-                payload.setOwner(this);
-            }
-        }
-    }
+public class Payload {
 
     @Transient
-    private Sequence owner;
+    private Payload parent;
+    private Map<String, List<Payload>> sequences;
 
-    private Map<String, String> attributes = new LinkedHashMap<>();
+    private Map<String, String> attributes;
+    private String text;
 
-    public Sequence getOwner() {
-        return owner;
+    public Payload getParent() {
+        return parent;
     }
 
-    public void setOwner(Sequence owner) {
-        this.owner = owner;
+    public void setParent(Payload parent) {
+        this.parent = parent;
+    }
+
+    public Map<String, List<Payload>> getSequences() {
+        if (sequences == null) {
+            sequences = new LinkedHashMap<>();
+        }
+
+        return sequences;
+    }
+
+    public void setSequences(Map<String, List<Payload>> sequences) {
+        this.sequences = sequences;
     }
 
     public Map<String, String> getAttributes() {
+        if (attributes == null) {
+            attributes = new LinkedHashMap<>();
+        }
+
         return attributes;
     }
 
     public void setAttributes(Map<String, String> attributes) {
         this.attributes = attributes;
+    }
+
+    public String getText() {
+        return text;
+    }
+
+    public void setText(String text) {
+        this.text = text;
     }
 }

@@ -1,10 +1,10 @@
-package info.anecdot.servlet;
+package info.anecdot.web;
 
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.Site;
 import info.anecdot.content.SiteService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -17,8 +17,7 @@ import java.nio.file.Path;
  */
 public class PebbleLoaderDecorator implements Loader<String> {
 
-    @Autowired
-    private SiteService siteService;
+    private final SiteService siteService;
 
     private final Loader<String> loader;
 
@@ -68,7 +67,8 @@ public class PebbleLoaderDecorator implements Loader<String> {
         return loader.createCacheKey(templateName);
     }
 
-    public PebbleLoaderDecorator(Loader<String> loader) {
+    public PebbleLoaderDecorator(SiteService siteService, Loader<String> loader) {
+        this.siteService = siteService;
         this.loader = loader;
     }
 }
