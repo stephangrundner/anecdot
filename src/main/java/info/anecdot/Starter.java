@@ -14,8 +14,10 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
+import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -36,13 +38,13 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-@SpringBootApplication
+@SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
 @PropertySources({
         @PropertySource("default.properties"),
         @PropertySource(ignoreResourceNotFound = true, value = {
                 "file:./anecdot.properties",
                 "file:/etc/anecdot/anecdot.properties"})})
-@Import({Starter.Web.class, Starter.Security.class})
+@Import({Starter.Web.class, Starter.WebSecurity.class})
 @EnableCaching
 @EnableScheduling
 public class Starter implements ApplicationRunner {
@@ -90,22 +92,40 @@ public class Starter implements ApplicationRunner {
                     .resourceChain(false)
                     .addResolver(resourceResolverDispatcher);
         }
+
+        @Bean
+        @ConfigurationProperties(prefix = "thumbor")
+        protected ThumborRunner thumborRunner() {
+            return new ThumborRunner();
+        }
+
+        @Bean
+        protected PebbleExtension pebbleExtension(ApplicationContext applicationContext) {
+            return new PebbleExtension(applicationContext);
+        }
+
+        @Bean
+        protected Loader<?> pebbleLoader(SiteService siteService) {
+            return new PebbleLoaderDecorator(siteService, new FileLoader());
+        }
     }
 
+//    @EnableAutoConfiguration()
     @EnableWebSecurity
     @ComponentScan(
             basePackageClasses = KeycloakSecurityComponents.class,
             excludeFilters = @ComponentScan.Filter(type = FilterType.REGEX,
                     pattern = "org.keycloak.adapters.springsecurity.management.HttpSessionManager"))
-    protected class Security extends KeycloakWebSecurityConfigurerAdapter {
+    @ConditionalOnProperty(value = "anecdot.security", havingValue = "enabled")
+    protected class WebSecurity extends KeycloakWebSecurityConfigurerAdapter {
 
         @Bean
-        public KeycloakSpringBootConfigResolver KeycloakConfigResolver() {
+        public KeycloakSpringBootConfigResolver keycloakConfigResolver() {
             return new KeycloakSpringBootConfigResolver();
         }
 
         @Override
-        protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        protected void configure(AuthenticationManagerBuilder auth) {
             KeycloakAuthenticationProvider keycloakAuthenticationProvider = keycloakAuthenticationProvider();
             keycloakAuthenticationProvider.setGrantedAuthoritiesMapper(new SimpleAuthorityMapper());
             auth.authenticationProvider(keycloakAuthenticationProvider);
@@ -127,22 +147,6 @@ public class Starter implements ApplicationRunner {
 
     @Autowired
     private ApplicationContext applicationContext;
-
-    @ConfigurationProperties(prefix = "thumbor")
-    @Bean
-    protected ThumborRunner thumborRunner() {
-        return new ThumborRunner();
-    }
-
-    @Bean
-    protected PebbleExtension pebbleExtension(ApplicationContext applicationContext) {
-        return new PebbleExtension(applicationContext);
-    }
-
-    @Bean
-    protected Loader<?> pebbleLoader(SiteService siteService) {
-        return new PebbleLoaderDecorator(siteService, new FileLoader());
-    }
 
 //    @Bean
 //    public MongoCustomConversions customConversions() {
