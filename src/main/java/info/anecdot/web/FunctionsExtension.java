@@ -24,7 +24,7 @@ import java.util.stream.Stream;
 /**
  * @author Stephan Grundner
  */
-public class PebbleExtension extends AbstractExtension {
+public class FunctionsExtension extends AbstractExtension {
 
     private HttpServletRequest currentRequest() {
         return ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
@@ -121,7 +121,7 @@ public class PebbleExtension extends AbstractExtension {
         return functions;
     }
 
-    public PebbleExtension(ApplicationContext applicationContext) {
+    public FunctionsExtension(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
     }
 }

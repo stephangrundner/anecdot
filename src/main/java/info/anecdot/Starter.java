@@ -9,12 +9,13 @@ import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
 import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.Banner;
 import org.springframework.boot.WebApplicationType;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
@@ -26,6 +27,8 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -34,11 +37,17 @@ import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.servlet.config.annotation.*;
 
-@SpringBootApplication(exclude = {SecurityAutoConfiguration.class})
+import javax.servlet.RequestDispatcher;
+import java.io.*;
+import java.nio.file.Paths;
+import java.util.List;
+
+@SpringBootApplication(exclude = {
+        SecurityAutoConfiguration.class})
 @PropertySources({
         @PropertySource("default.properties"),
         @PropertySource(ignoreResourceNotFound = true, value = {
@@ -89,28 +98,48 @@ public class Starter implements ApplicationRunner {
                     applicationContext.getBean(ResourceResolverDispatcher.class);
 
             registry.addResourceHandler("/**")
+                    .setCacheControl(CacheControl.empty())
                     .resourceChain(false)
+//                    .resourceChain(true)
                     .addResolver(resourceResolverDispatcher);
         }
 
-        @Bean
-        @ConfigurationProperties(prefix = "thumbor")
-        protected ThumborRunner thumborRunner() {
-            return new ThumborRunner();
+        @Override
+        public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
+            resolvers.add((request, response, handler, e) -> {
+                Integer status = (Integer) request.getAttribute(RequestDispatcher.ERROR_STATUS_CODE);
+                if (status == null) {
+
+                    if (e instanceof FileNotFoundException) {
+                        status = HttpStatus.NOT_FOUND.value();
+                    } else {
+                        status = HttpStatus.INTERNAL_SERVER_ERROR.value();
+                    }
+                }
+
+                ModelAndView modelAndView = new ModelAndView();
+                modelAndView.setViewName("error");
+                modelAndView.addObject("status", status);
+                modelAndView.addObject("message", e.getMessage());
+                modelAndView.addObject("e", e);
+
+                e.printStackTrace();
+
+                return modelAndView;
+            });
         }
 
         @Bean
-        protected PebbleExtension pebbleExtension(ApplicationContext applicationContext) {
-            return new PebbleExtension(applicationContext);
+        protected FunctionsExtension pebbleExtension(ApplicationContext applicationContext) {
+            return new FunctionsExtension(applicationContext);
         }
 
         @Bean
         protected Loader<?> pebbleLoader(SiteService siteService) {
-            return new PebbleLoaderDecorator(siteService, new FileLoader());
+            return new LoaderDecorator(siteService, new FileLoader());
         }
     }
 
-//    @EnableAutoConfiguration()
     @EnableWebSecurity
     @ComponentScan(
             basePackageClasses = KeycloakSecurityComponents.class,
@@ -162,6 +191,51 @@ public class Starter implements ApplicationRunner {
         Environment environment = applicationContext.getEnvironment();
         SiteService siteService = applicationContext.getBean(SiteService.class);
         siteService.reloadSitesSettings(environment);
+
+
+        File configFile = File.createTempFile("thumbor", ".conf");
+        configFile.deleteOnExit();
+        try (FileOutputStream outputStream = new FileOutputStream(configFile);
+             PrintStream printer = new PrintStream(outputStream)) {
+
+            printer.println("LOADER='thumbor.loaders.file_loader'");
+            printer.println("FILE_LOADER_ROOT_PATH='/'");
+            printer.printf("STORAGE='%s'\n", "thumbor.storages.file_storage");
+//            printer.printf("STORAGE_EXPIRATION_SECONDS=%d\n", 60 * 60);
+//            printer.printf("FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
+            printer.printf("RESULT_STORAGE='%s'\n", "thumbor.result_storages.file_storage");
+//            printer.printf("RESULT_STORAGE_FILE_STORAGE_ROOT_PATH='%s'\n", "/tmp");
+            printer.printf("RESULT_STORAGE_STORES_UNSAFE=%s\n", "True");;
+        }
+
+        Integer port = environment.getProperty("thumbor.port", Integer.class);
+        String loggingLevel = environment.getProperty("thumbor.debug", Boolean.class, false) ? "DEBUG" : "INFO";
+        ProcessBuilder builder = new ProcessBuilder()
+                .command("thumbor",
+                        "-p", Integer.toString(port),
+                        "-l", "DEBUG",
+                        "-c", configFile.toString());
+
+        File directory = Paths.get(".").toRealPath().toFile();
+        builder.directory(directory);
+        builder.redirectErrorStream(true);
+
+        Process process = builder.start();
+
+        Logger LOG = LoggerFactory.getLogger("thumbor");
+        try (InputStreamReader reader = new InputStreamReader(process.getInputStream());
+             BufferedReader buffer = new BufferedReader(reader);
+             PrintStream printer = new PrintStream(System.out)) {
+
+            String line;
+            while (process.isAlive() && (line = buffer.readLine()) != null) {
+                printer.println(line);
+                LOG.debug(line);
+            }
+        }
+
+        int exitValue = process.waitFor();
+        LOG.debug("Thumbor exited: " + exitValue);
     }
 
     public static void main(String[] args) {

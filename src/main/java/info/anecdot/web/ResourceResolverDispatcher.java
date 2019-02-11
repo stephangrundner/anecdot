@@ -5,12 +5,17 @@ import info.anecdot.content.SiteService;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.resource.AbstractResourceResolver;
 import org.springframework.web.servlet.resource.ResourceResolverChain;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -20,7 +25,7 @@ import java.util.List;
  */
 public class ResourceResolverDispatcher extends AbstractResourceResolver implements ApplicationContextAware {
 
-    private static final String THEME_URL_PATH_PREFIX = "theme/";
+    public static final String THEME_URL_PATH_PREFIX = "theme/";
 
     private ApplicationContext applicationContext;
 
@@ -29,28 +34,74 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         this.applicationContext = applicationContext;
     }
 
-    private String ensureTrailingSlash(String uri) {
-        if (!uri.endsWith("/")) {
-            return uri + "/";
-        }
-
-        return uri;
-    }
-
     private Resource toFileResource(Path path) {
         String location = "file:" + path.toString();
-        return applicationContext.getResource(ensureTrailingSlash(location));
+        if (!location.endsWith("/")) {
+            location += "/";
+        }
+        return applicationContext.getResource(location);
     }
 
     @Override
     protected Resource resolveResourceInternal(HttpServletRequest request, String requestPath, List<? extends Resource> locations, ResourceResolverChain chain) {
-        SiteService siteService = applicationContext.getBean(SiteService.class);
-        Site site = siteService.findSiteByRequest(request);
 
         String name = FilenameUtils.getName(requestPath);
         if (StringUtils.startsWithIgnoreCase(name, ".")) {
             return null;
         }
+
+        String size = request.getParameter("size");
+        if (size != null) {
+            SiteService siteService = applicationContext.getBean(SiteService.class);
+
+            Site site = siteService.findSiteByRequest(request);
+            String imageBasePath = site.getBase().toString();
+
+            if (imageBasePath.startsWith("./")) {
+                imageBasePath = imageBasePath.substring(2);
+            }
+
+            if (!imageBasePath.endsWith("/")) {
+                imageBasePath += "/";
+            }
+
+            Environment environment = applicationContext.getEnvironment();
+            Integer port = environment.getProperty("thumbor.port", Integer.class);
+            String thumborUrl = String.format("http://localhost:%d/%s/%s/%s",
+                    port,
+                    "unsafe",
+                    size,
+                    imageBasePath + requestPath);
+
+            try {
+                return new UrlResource(thumborUrl) {
+                    @Override
+                    public long lastModified() throws IOException {
+                        return -1;
+                    }
+
+                    @Override
+                    public synchronized long contentLength() throws IOException {
+                        return -1;
+                    }
+
+                    @Override
+                    public boolean isReadable() {
+                        return true;
+                    }
+
+                    @Override
+                    public Resource createRelative(String relativePath) throws MalformedURLException {
+                        throw new UnsupportedOperationException();
+                    }
+                };
+            } catch (MalformedURLException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        SiteService siteService = applicationContext.getBean(SiteService.class);
+        Site site = siteService.findSiteByRequest(request);
 
         if (requestPath.startsWith(THEME_URL_PATH_PREFIX)) {
             requestPath = requestPath.substring(THEME_URL_PATH_PREFIX.length(), requestPath.length());

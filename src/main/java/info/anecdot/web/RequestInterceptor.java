@@ -7,8 +7,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
-import org.springframework.boot.autoconfigure.web.servlet.error.BasicErrorController;
-import org.springframework.boot.autoconfigure.web.servlet.error.ErrorViewResolver;
 import org.springframework.web.servlet.*;
 import org.springframework.web.util.UrlPathHelper;
 
@@ -27,22 +25,13 @@ public class RequestInterceptor implements HandlerInterceptor {
     private LocaleResolver localeResolver;
 
     @Autowired
-    private ItemService itemService;
-
-    @Autowired
-    private ThumborRunner thumborRunner;
-
-    @Autowired
-    private ViewResolver viewResolver;
-
-    @Autowired
     private ServerProperties serverProperties;
 
     @Autowired
-    private BasicErrorController errorController;
+    private ItemService itemService;
 
     @Autowired
-    private ErrorViewResolver errorViewResolver;
+    private ViewResolver viewResolver;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -51,20 +40,11 @@ public class RequestInterceptor implements HandlerInterceptor {
 
         ErrorProperties errorProperties = serverProperties.getError();
         if (requestUri.equals(errorProperties.getPath())) {
-            ModelAndView modelAndView = errorController.errorHtml(request, response);
-            View errorView = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
-            errorView.render(modelAndView.getModel(), request, response);
 
-            return false;
+            return true;
         }
 
-        if (request.getParameter("size") != null) {
-            thumborRunner.process(request, response);
-
-            return false;
-        }
-
-        if (!requestUri.startsWith("/theme")) {
+        if (!requestUri.startsWith(ResourceResolverDispatcher.THEME_URL_PATH_PREFIX)) {
             Item item = itemService.findItemByRequestAndUri(request, request.getRequestURI());
 
             if (item != null) {
