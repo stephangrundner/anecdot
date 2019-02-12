@@ -1,7 +1,9 @@
 package info.anecdot.web;
 
-import info.anecdot.content.*;
-import info.anecdot.content.Observer;
+import info.anecdot.content.Item;
+import info.anecdot.content.ItemService;
+import info.anecdot.content.Site;
+import info.anecdot.content.SiteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,15 +50,16 @@ public class RequestInterceptor implements HandlerInterceptor {
         }
 
         if (!requestUri.startsWith("/theme")) {
-            Site site = siteService.findSiteByRequest(request);
+            String host = request.getServerName();
+            Site site = siteService.findSiteByHost(host);
+
             if (site == null) {
                 return true;
             }
 
             ModelAndView modelAndView = new ModelAndView();
 
-            Observer observer = siteService.findObserverBySite(site);
-            if (observer != null && observer.isBusy()) {
+            if (site.isBusy()) {
                 modelAndView.setViewName("busy");
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
                 view.render(modelAndView.getModel(), request, response);

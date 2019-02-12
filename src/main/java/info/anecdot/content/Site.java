@@ -1,5 +1,8 @@
 package info.anecdot.content;
 
+import org.apache.commons.io.FilenameUtils;
+import org.springframework.util.StringUtils;
+
 import java.nio.file.Path;
 import java.util.*;
 
@@ -13,6 +16,9 @@ public class Site {
     private Path base;
     private Path theme;
     private String home;
+
+    private Observer observer;
+    private boolean busy;
 
     private final Map<String, Item> itemByUri = new LinkedHashMap<>();
 
@@ -48,6 +54,22 @@ public class Site {
         this.home = home;
     }
 
+    public Observer getObserver() {
+        return observer;
+    }
+
+    public void setObserver(Observer observer) {
+        this.observer = observer;
+    }
+
+    public boolean isBusy() {
+        return busy;
+    }
+
+    public void setBusy(boolean busy) {
+        this.busy = busy;
+    }
+
     public Set<String> getUris() {
         return Collections.unmodifiableSet(itemByUri.keySet());
     }
@@ -80,5 +102,15 @@ public class Site {
         }
 
         return false;
+    }
+
+    public String toUri(Path file) {
+        String uri = base.relativize(file).toString();
+        uri = FilenameUtils.removeExtension(uri);
+        if (!StringUtils.startsWithIgnoreCase(uri, "/")) {
+            uri = "/" + uri;
+        }
+
+        return uri;
     }
 }

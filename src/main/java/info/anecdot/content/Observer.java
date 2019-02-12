@@ -25,8 +25,6 @@ public class Observer implements Runnable {
     private WatchService watchService;
     private final Set<WatchKey> keys = new LinkedHashSet<>();
 
-    private boolean busy;
-
     @Autowired
     private SiteService siteService;
 
@@ -53,7 +51,7 @@ public class Observer implements Runnable {
             return;
         }
 
-        itemService.loadItem(site, file, true);
+        itemService.loadItem(site, file);
 
         LOG.info("(Re)loaded " + file);
     }
@@ -76,7 +74,7 @@ public class Observer implements Runnable {
 
     private void deleted(Path path, boolean file) throws Exception {
         if (file) {
-            String uri = siteService.toUri(site, path);
+            String uri = site.toUri(path);
             Item item = itemService.findItemBySiteAndUri(site, uri);
             if (item != null && site.removeItem(item)) {
                 LOG.info("Removed " + path);
@@ -116,12 +114,7 @@ public class Observer implements Runnable {
         }
     }
 
-    public boolean isBusy() {
-        return busy;
-    }
-
-    @Override
-    public void run() {
+    public synchronized void run() {
         Path root = site.getBase();
 
         try {
@@ -129,10 +122,10 @@ public class Observer implements Runnable {
             watchService = fileSystem.newWatchService();
 
             try {
-                busy = true;
+                site.setBusy(true);
                 observe(root);
             } finally {
-                busy = false;
+                site.setBusy(false);
             }
 
             WatchKey key;

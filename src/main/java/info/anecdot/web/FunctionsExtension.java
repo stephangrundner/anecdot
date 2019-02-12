@@ -38,8 +38,9 @@ public class FunctionsExtension extends AbstractExtension {
             SiteService siteService = applicationContext.getBean(SiteService.class);
 
             ItemService itemService = applicationContext.getBean(ItemService.class);
-            Site site = siteService.findSiteByRequest(currentRequest());
             String host = currentRequest().getServerName();
+            Site site = siteService.findSiteByHost(host);
+
             Stream<Item> stream = site.getItems().stream();
 
 //            String uri = (String) args.get("uri");
@@ -94,7 +95,8 @@ public class FunctionsExtension extends AbstractExtension {
             ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder
                     .currentRequestAttributes();
             SiteService siteService = applicationContext.getBean(SiteService.class);
-            Site site = siteService.findSiteByRequest(servletRequestAttributes.getRequest());
+            String host = servletRequestAttributes.getRequest().getServerName();
+            Site site = siteService.findSiteByHost(host);
             expressionEvaluationContext.setVariable("site", site);
             ((StandardEvaluationContext) expressionEvaluationContext).setBeanResolver(((context, beanName) -> {
                 return applicationContext.getBean(beanName);

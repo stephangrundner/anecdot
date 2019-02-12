@@ -2,16 +2,13 @@ package info.anecdot.content;
 
 import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.apache.commons.collections4.map.LazyMap;
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.w3c.dom.*;
 import org.xml.sax.SAXException;
 
-import javax.servlet.http.HttpServletRequest;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -19,9 +16,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.Callable;
 
 /**
  * @author Stephan Grundner
@@ -32,6 +27,7 @@ public class ItemService {
     @Autowired
     private SiteService siteService;
 
+    @Cacheable(cacheNames = "items", key = "{#site.host, #uri}")
     public Item findItemBySiteAndUri(Site site, String uri) {
         if (uri.equals("/")) {
             uri = site.getHome();
@@ -40,11 +36,6 @@ public class ItemService {
         Item item = site.getItem(uri);
 
         return item;
-    }
-
-    public Item findItemByRequestAndUri(HttpServletRequest request, String uri) {
-        Site site = siteService.findSiteByRequest(request);
-        return findItemBySiteAndUri(site, uri);
     }
 
     private boolean hasChildElements(Node node) {
@@ -111,7 +102,8 @@ public class ItemService {
         return payload;
     }
 
-    private Item loadItem(Site site, Path file) throws IOException {
+    @CacheEvict(cacheNames = "items", key = "{#site.host, #site.toUri(#file)}")
+    public Item loadItem(Site site, Path file) throws IOException {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         try (InputStream inputStream = Files.newInputStream(file)) {
             DocumentBuilder db = dbf.newDocumentBuilder();
@@ -120,22 +112,14 @@ public class ItemService {
 
             item.setSite(site);
 
-            String uri = siteService.toUri(site, file);
+            String uri = site.toUri(file);
             item.setUri(uri);
+            site.addItem(item);
 
             return item;
         } catch (SAXException | ParserConfigurationException e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public Item loadItem(Site site, Path file, boolean save) throws IOException {
-        Item item = loadItem(site, file);
-        if (save && item != null) {
-            site.addItem(item);
-        }
-
-        return item;
     }
 
     private <K> Map<K, Object> createMap() {

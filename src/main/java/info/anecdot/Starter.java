@@ -3,7 +3,10 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.SiteService;
-import info.anecdot.web.*;
+import info.anecdot.web.FunctionsExtension;
+import info.anecdot.web.LoaderDecorator;
+import info.anecdot.web.RequestInterceptor;
+import info.anecdot.web.ResourceResolverDispatcher;
 import org.apache.catalina.connector.Connector;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
@@ -39,7 +42,9 @@ import org.springframework.security.web.authentication.session.RegisterSessionAu
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.config.annotation.*;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.servlet.RequestDispatcher;
 import java.io.*;

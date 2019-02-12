@@ -24,7 +24,8 @@ public class LoaderDecorator implements Loader<String> {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
                 .getRequest();
 
-        Site site = siteService.findSiteByRequest(request);
+        String host = request.getServerName();
+        Site site = siteService.findSiteByHost(host);
         Path directory = site.getTheme();
 
         try {

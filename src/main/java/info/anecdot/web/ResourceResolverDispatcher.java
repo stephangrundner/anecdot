@@ -50,11 +50,13 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
             return null;
         }
 
+        String host = request.getServerName();
+
         String size = request.getParameter("size");
         if (size != null) {
             SiteService siteService = applicationContext.getBean(SiteService.class);
 
-            Site site = siteService.findSiteByRequest(request);
+            Site site = siteService.findSiteByHost(host);
             String imageBasePath = site.getBase().toString();
 
             if (imageBasePath.startsWith("./")) {
@@ -101,7 +103,7 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         }
 
         SiteService siteService = applicationContext.getBean(SiteService.class);
-        Site site = siteService.findSiteByRequest(request);
+        Site site = siteService.findSiteByHost(host);
 
         if (requestPath.startsWith(THEME_URL_PATH_PREFIX)) {
             requestPath = requestPath.substring(THEME_URL_PATH_PREFIX.length(), requestPath.length());

@@ -1,19 +1,16 @@
 package info.anecdot.content;
 
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
@@ -39,70 +36,50 @@ public class SiteService {
     }
 
     @Autowired
+    private CacheManager cacheManager;
+
+    @Autowired
     private ListableBeanFactory beanFactory;
 
-    private final Set<Observer> observers = new HashSet<>();
+    private ExecutorService executorService;
 
-    private Observer findObserverByHost(String host) {
-        return observers.stream()
-                .filter(it -> host.equals(it.getSite().getHost()))
-                .findFirst()
-                .orElse(null);
-    }
-
-    @Cacheable(cacheNames = "observers", key = "#site.host")
-    public Observer findObserverBySite(Site site) {
-        return findObserverByHost(site.getHost());
-    }
-
-    public String toUri(Site site, Path file) {
-        Path base = site.getBase();
-        String uri = base.relativize(file).toString();
-        uri = FilenameUtils.removeExtension(uri);
-        if (!StringUtils.startsWithIgnoreCase(uri, "/")) {
-            uri = "/" + uri;
-        }
-
-        return uri;
-    }
-
-    @CacheEvict(cacheNames = "observers", key = "#site.host")
-    private Observer observe(Site site) throws IOException {
-        Observer observer = findObserverBySite(site);
-        if (observer != null) {
-            throw new IllegalStateException("Observation already running for site " + site);
-        }
-
-        observer = beanFactory.getBean(Observer.class, site);
-        observers.add(observer);
-
-        Executors.newSingleThreadExecutor().execute(observer);
-
-        return observer;
-    }
+    private final Set<Site> sites = new HashSet<>();
 
     public Site findSiteByHost(String host) {
-        Observer observer = findObserverByHost(host);
-        if (observer != null) {
+        Cache cache = cacheManager.getCache("sites");
+        Site site = cache.get(host, Site.class);
+        if (site == null) {
+            site = sites.stream()
+                    .filter(it -> it.getHost().equals(host))
+                    .findFirst().orElse(null);
 
-            return observer.getSite();
+            if (site != null) {
+                cache.put(host, site);
+            }
         }
 
-        return null;
+        return site;
     }
 
-    public Site findSiteByRequest(HttpServletRequest request) {
-        String host = request.getServerName();
-        return findSiteByHost(host);
-    }
+    public void reloadSites(PropertyResolver propertyResolver) {
+        sites.clear();
 
-    public void reloadSites(PropertyResolver propertyResolver) throws IOException {
         List<String> keys = getProperties(propertyResolver, "anecdot.sites");
+
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+
+        executorService = Executors.newFixedThreadPool(keys.size());
+
         for (String key : keys) {
 
             String prefix = String.format("anecdot.site.%s", key);
 
             String host = propertyResolver.getProperty(prefix + ".host");
+
+            Cache cache = cacheManager.getCache("sites");
+            cache.evict(host);
 
             Site site = findSiteByHost(host);
             if (site == null) {
@@ -127,7 +104,13 @@ public class SiteService {
             String home = propertyResolver.getProperty(prefix + ".home", "/home");
             site.setHome(home);
 
-            observe(site);
+            Observer observer = beanFactory.getBean(Observer.class, site);
+            site.setObserver(observer);
+
+            sites.add(site);
+            cache.put(host, site);
+
+            executorService.execute(observer);
         }
     }
 }
