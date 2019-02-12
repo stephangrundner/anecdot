@@ -42,7 +42,7 @@ public class SiteService {
     private final Set<Site> sites = new LinkedHashSet<>();
     private final Set<SiteObserver> observers = new LinkedHashSet<>();
 
-    private SiteObserver findObserverBySite(Site site) {
+    public SiteObserver findObserverBySite(Site site) {
         return observers.stream()
                 .filter(it -> it.getSite().equals(site))
                 .findFirst()

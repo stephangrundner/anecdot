@@ -25,6 +25,8 @@ public class SiteObserver implements Runnable {
     private WatchService watchService;
     private final Set<WatchKey> keys = new LinkedHashSet<>();
 
+    private boolean starting;
+
     @Autowired
     private SiteService siteService;
 
@@ -114,6 +116,10 @@ public class SiteObserver implements Runnable {
         }
     }
 
+    public boolean isStarting() {
+        return starting;
+    }
+
     @Override
     public void run() {
         Path root = site.getBase();
@@ -121,7 +127,13 @@ public class SiteObserver implements Runnable {
         try {
             FileSystem fileSystem = root.getFileSystem();
             watchService = fileSystem.newWatchService();
-            observe(root);
+
+            try {
+                starting = true;
+                observe(root);
+            } finally {
+                starting = false;
+            }
 
             WatchKey key;
 

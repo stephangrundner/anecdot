@@ -1,7 +1,6 @@
 package info.anecdot.web;
 
-import info.anecdot.content.Item;
-import info.anecdot.content.ItemService;
+import info.anecdot.content.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +27,9 @@ public class RequestInterceptor implements HandlerInterceptor {
     private ServerProperties serverProperties;
 
     @Autowired
+    private SiteService siteService;
+
+    @Autowired
     private ItemService itemService;
 
     @Autowired
@@ -44,11 +46,27 @@ public class RequestInterceptor implements HandlerInterceptor {
             return true;
         }
 
-        if (!requestUri.startsWith(ResourceResolverDispatcher.THEME_URL_PATH_PREFIX)) {
-            Item item = itemService.findItemByRequestAndUri(request, request.getRequestURI());
+        if (!requestUri.startsWith("/theme")) {
+            Site site = siteService.findSiteByRequest(request);
+            if (site == null) {
+                return true;
+            }
+
+            ModelAndView modelAndView = new ModelAndView();
+
+            SiteObserver observer = siteService.findObserverBySite(site);
+            if (observer != null && observer.isStarting()) {
+                modelAndView.setViewName("busy");
+                View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
+                view.render(modelAndView.getModel(), request, response);
+
+                return false;
+            }
+
+            Item item = itemService.findItemBySiteAndUri(site, request.getRequestURI());
 
             if (item != null) {
-                ModelAndView modelAndView = new ModelAndView();
+
                 modelAndView.addObject("page", itemService.toMap(item));
 
                 Map<String, Object> params = new LinkedHashMap<>();
