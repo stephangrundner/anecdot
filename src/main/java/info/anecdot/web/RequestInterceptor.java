@@ -50,6 +50,7 @@ public class RequestInterceptor implements HandlerInterceptor {
             if (item != null) {
                 ModelAndView modelAndView = new ModelAndView();
                 modelAndView.addObject("page", itemService.toMap(item));
+
                 Map<String, Object> params = new LinkedHashMap<>();
                 Enumeration<String> parameterNames = request.getParameterNames();
                 while (parameterNames.hasMoreElements()) {
@@ -61,8 +62,8 @@ public class RequestInterceptor implements HandlerInterceptor {
                         params.put(name + i, value);
                     }
                 }
-
                 modelAndView.addObject("params", params);
+
                 modelAndView.setViewName(item.getType());
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
                 view.render(modelAndView.getModel(), request, response);

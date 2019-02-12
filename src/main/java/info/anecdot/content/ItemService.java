@@ -163,10 +163,11 @@ public class ItemService {
         }, this::createMap);
     }
 
-    public Map<String, Object> toMap(Payload payload, Map<String, Object> parent) {
+    public Map<String, Object> toMap(Payload payload, String name, Map<String, Object> parent) {
         Map<String, Object> map = createMap();
 
         map.put("#payload", payload);
+        map.put("#name", name);
 //        map.put("#name", Optional.ofNullable(payload.getOwner()).map(Payload.Sequence::getName).orElse(null));
         map.put("#value", payload.getText());
 //        if (payload instanceof Item) {
@@ -182,19 +183,19 @@ public class ItemService {
 
         List<Object> children = new ArrayList<>();
 
-        payload.getSequences().forEach((name, sequence) -> {
+        payload.getSequences().forEach((x, sequence) -> {
             Map<Object, Object> values = createMap();
             int i = 0;
 
             for (Payload child : sequence) {
-                Map<String, Object> childMap = toMap(child, map);
+                Map<String, Object> childMap = toMap(child, x, map);
                 if (i == 0) {
                     values.putAll(childMap);
                 }
                 values.put(Integer.toString(i++), childMap);
             }
 
-            map.put(name, values);
+            map.put(x, values);
             children.add(values);
         });
 
@@ -204,6 +205,6 @@ public class ItemService {
     }
 
     public Map<String, Object> toMap(Payload payload) {
-        return toMap(payload, Collections.emptyMap());
+        return toMap(payload, null, Collections.emptyMap());
     }
 }

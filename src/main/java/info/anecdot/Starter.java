@@ -213,7 +213,7 @@ public class Starter implements ApplicationRunner {
         ProcessBuilder builder = new ProcessBuilder()
                 .command("thumbor",
                         "-p", Integer.toString(port),
-                        "-l", "DEBUG",
+                        "-l", loggingLevel,
                         "-c", configFile.toString());
 
         File directory = Paths.get(".").toRealPath().toFile();
