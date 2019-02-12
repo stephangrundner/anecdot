@@ -3,6 +3,8 @@ package info.anecdot.content;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -39,14 +41,18 @@ public class SiteService {
     @Autowired
     private ListableBeanFactory beanFactory;
 
-    private final Set<Site> sites = new LinkedHashSet<>();
-    private final Set<SiteObserver> observers = new LinkedHashSet<>();
+    private final Set<Observer> observers = new HashSet<>();
 
-    public SiteObserver findObserverBySite(Site site) {
+    private Observer findObserverByHost(String host) {
         return observers.stream()
-                .filter(it -> it.getSite().equals(site))
+                .filter(it -> host.equals(it.getSite().getHost()))
                 .findFirst()
                 .orElse(null);
+    }
+
+    @Cacheable(cacheNames = "observers", key = "#site.host")
+    public Observer findObserverBySite(Site site) {
+        return findObserverByHost(site.getHost());
     }
 
     public String toUri(Site site, Path file) {
@@ -60,13 +66,14 @@ public class SiteService {
         return uri;
     }
 
-    private SiteObserver observe(Site site) throws IOException {
-        SiteObserver observer = findObserverBySite(site);
+    @CacheEvict(cacheNames = "observers", key = "#site.host")
+    private Observer observe(Site site) throws IOException {
+        Observer observer = findObserverBySite(site);
         if (observer != null) {
             throw new IllegalStateException("Observation already running for site " + site);
         }
 
-        observer = beanFactory.getBean(SiteObserver.class, site);
+        observer = beanFactory.getBean(Observer.class, site);
         observers.add(observer);
 
         Executors.newSingleThreadExecutor().execute(observer);
@@ -75,10 +82,13 @@ public class SiteService {
     }
 
     public Site findSiteByHost(String host) {
-        return sites.stream()
-                .filter(it -> it.getHost().equals(host))
-                .findFirst()
-                .orElse(null);
+        Observer observer = findObserverByHost(host);
+        if (observer != null) {
+
+            return observer.getSite();
+        }
+
+        return null;
     }
 
     public Site findSiteByRequest(HttpServletRequest request) {
@@ -87,8 +97,6 @@ public class SiteService {
     }
 
     public void reloadSites(PropertyResolver propertyResolver) throws IOException {
-        sites.clear();
-
         List<String> keys = getProperties(propertyResolver, "anecdot.sites");
         for (String key : keys) {
 
@@ -118,8 +126,6 @@ public class SiteService {
 
             String home = propertyResolver.getProperty(prefix + ".home", "/home");
             site.setHome(home);
-
-            sites.add(site);
 
             observe(site);
         }

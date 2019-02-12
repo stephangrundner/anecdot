@@ -1,6 +1,7 @@
 package info.anecdot.web;
 
 import info.anecdot.content.*;
+import info.anecdot.content.Observer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,8 +55,8 @@ public class RequestInterceptor implements HandlerInterceptor {
 
             ModelAndView modelAndView = new ModelAndView();
 
-            SiteObserver observer = siteService.findObserverBySite(site);
-            if (observer != null && observer.isStarting()) {
+            Observer observer = siteService.findObserverBySite(site);
+            if (observer != null && observer.isBusy()) {
                 modelAndView.setViewName("busy");
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
                 view.render(modelAndView.getModel(), request, response);

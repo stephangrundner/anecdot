@@ -17,15 +17,15 @@ import java.util.Set;
  */
 @Component
 @Scope("prototype")
-public class SiteObserver implements Runnable {
+public class Observer implements Runnable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SiteObserver.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Observer.class);
 
     private final Site site;
     private WatchService watchService;
     private final Set<WatchKey> keys = new LinkedHashSet<>();
 
-    private boolean starting;
+    private boolean busy;
 
     @Autowired
     private SiteService siteService;
@@ -116,8 +116,8 @@ public class SiteObserver implements Runnable {
         }
     }
 
-    public boolean isStarting() {
-        return starting;
+    public boolean isBusy() {
+        return busy;
     }
 
     @Override
@@ -129,10 +129,10 @@ public class SiteObserver implements Runnable {
             watchService = fileSystem.newWatchService();
 
             try {
-                starting = true;
+                busy = true;
                 observe(root);
             } finally {
-                starting = false;
+                busy = false;
             }
 
             WatchKey key;
@@ -208,7 +208,7 @@ public class SiteObserver implements Runnable {
         }
     }
 
-    public SiteObserver(Site site) {
+    public Observer(Site site) {
         this.site = site;
     }
 }
