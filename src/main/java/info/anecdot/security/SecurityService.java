@@ -1,14 +1,12 @@
 package info.anecdot.security;
 
-import info.anecdot.xml.DomSupport;
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
+import info.anecdot.xml.DomSupport;
 import org.apache.commons.io.FilenameUtils;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
 import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.keycloak.representations.AccessToken;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -45,9 +43,6 @@ import java.util.stream.Collectors;
 public class SecurityService implements DomSupport {
 
     private final XPath xPath = XPathFactory.newInstance().newXPath();
-
-    @Autowired
-    private SiteService siteService;
 
     private Map<String, Access> accessMap = new ConcurrentSkipListMap<>();
 
@@ -145,13 +140,7 @@ public class SecurityService implements DomSupport {
                             if (match) {
                                 granted.set(false);
                             }
-
                         }
-//                        if (match) {
-//                            granted.set(permission.getKind() == Permission.Kind.ALLOW);
-//                        }
-
-                        "".toString();
                     }
                 }
             }

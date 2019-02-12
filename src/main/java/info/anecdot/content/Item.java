@@ -1,41 +1,23 @@
 package info.anecdot.content;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
-import org.springframework.data.mongodb.core.index.CompoundIndexes;
-import org.springframework.data.mongodb.core.mapping.Document;
+import java.nio.file.Path;
 
 /**
  * @author Stephan Grundner
  */
-@Document
-@CompoundIndexes(@CompoundIndex(
-        name = "site_uri",
-        def = "{'host' : 1, 'uri' : 1}"))
 public class Item extends Payload {
 
-    @Id
-    private String id;
-
-    private String host;
+    private Site site;
     private String uri;
 
     private String type;
 
-    public String getId() {
-        return id;
+    public Site getSite() {
+        return site;
     }
 
-    public void setId(String id) {
-        this.id = id;
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public void setHost(String host) {
-        this.host = host;
+    public void setSite(Site site) {
+        this.site = site;
     }
 
     public String getUri() {
@@ -52,5 +34,21 @@ public class Item extends Payload {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public Path getFile() {
+        if (site != null) {
+            Path base = site.getBase();
+            String relativePathToFile = uri;
+            if (relativePathToFile.charAt(0) == '/') {
+                relativePathToFile = relativePathToFile.substring(1);
+            }
+
+            Path file = base.resolve(relativePathToFile);
+
+            return file;
+        }
+
+        return null;
     }
 }

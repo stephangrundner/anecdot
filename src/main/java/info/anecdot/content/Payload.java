@@ -1,7 +1,5 @@
 package info.anecdot.content;
 
-import org.springframework.data.annotation.Transient;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +9,6 @@ import java.util.Map;
  */
 public class Payload {
 
-    @Transient
     private Payload parent;
     private Map<String, List<Payload>> sequences;
 

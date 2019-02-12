@@ -37,11 +37,10 @@ public class FunctionsExtension extends AbstractExtension {
 
             SiteService siteService = applicationContext.getBean(SiteService.class);
 
-
             ItemService itemService = applicationContext.getBean(ItemService.class);
-//            Site site = siteService.findSiteByRequest(currentRequest());
+            Site site = siteService.findSiteByRequest(currentRequest());
             String host = currentRequest().getServerName();
-            Stream<Item> stream = itemService.findItemsByHost(host).stream();
+            Stream<Item> stream = site.getItems().stream();
 
 //            String uri = (String) args.get("uri");
 //            if (StringUtils.hasText(uri)) {

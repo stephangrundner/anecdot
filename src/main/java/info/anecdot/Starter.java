@@ -177,20 +177,11 @@ public class Starter implements ApplicationRunner {
     @Autowired
     private ApplicationContext applicationContext;
 
-//    @Bean
-//    public MongoCustomConversions customConversions() {
-//        List<Converter<?, ?>> converters = new ArrayList<>();
-//        converters.add(new PathReadingConverter());
-//        converters.add(new PathWritingConverter());
-//
-//        return new MongoCustomConversions(converters);
-//    }
-
     @Override
     public void run(ApplicationArguments args) throws Exception {
         Environment environment = applicationContext.getEnvironment();
         SiteService siteService = applicationContext.getBean(SiteService.class);
-        siteService.reloadSitesSettings(environment);
+        siteService.reloadSites(environment);
 
 
         File configFile = File.createTempFile("thumbor", ".conf");

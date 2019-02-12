@@ -33,7 +33,7 @@ repositories {
 
 dependencies {
 	implementation('org.springframework.boot:spring-boot-starter-web')
-	implementation('org.springframework.boot:spring-boot-starter-data-mongodb')
+//	implementation('org.springframework.boot:spring-boot-starter-data-mongodb')
 	implementation('org.springframework.boot:spring-boot-starter-security')
 	implementation('org.springframework.boot:spring-boot-starter-thymeleaf')
 	implementation('io.pebbletemplates:pebble-spring-boot-2-starter:3.0.7')

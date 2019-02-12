@@ -1,5 +1,6 @@
 package info.anecdot.content;
 
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.PropertyResolver;
@@ -8,6 +9,7 @@ import org.springframework.util.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.Executors;
@@ -24,8 +26,7 @@ public class SiteService {
                 super(c);
             }
 
-            public StringArrayList() {
-            }
+            public StringArrayList() { }
         }
 
         return propertyResolver.getProperty(key, StringArrayList.class, new StringArrayList(defaultValues));
@@ -46,6 +47,17 @@ public class SiteService {
                 .filter(it -> it.getSite().equals(site))
                 .findFirst()
                 .orElse(null);
+    }
+
+    public String toUri(Site site, Path file) {
+        Path base = site.getBase();
+        String uri = base.relativize(file).toString();
+        uri = FilenameUtils.removeExtension(uri);
+        if (!StringUtils.startsWithIgnoreCase(uri, "/")) {
+            uri = "/" + uri;
+        }
+
+        return uri;
     }
 
     private SiteObserver observe(Site site) throws IOException {
@@ -74,7 +86,7 @@ public class SiteService {
         return findSiteByHost(host);
     }
 
-    public void reloadSitesSettings(PropertyResolver propertyResolver) throws IOException {
+    public void reloadSites(PropertyResolver propertyResolver) throws IOException {
         sites.clear();
 
         List<String> keys = getProperties(propertyResolver, "anecdot.sites");

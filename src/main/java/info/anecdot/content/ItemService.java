@@ -4,6 +4,8 @@ import org.apache.commons.collections4.map.AbstractMapDecorator;
 import org.apache.commons.collections4.map.LazyMap;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.w3c.dom.*;
@@ -17,7 +19,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.Callable;
 
 /**
  * @author Stephan Grundner
@@ -26,36 +30,21 @@ import java.util.*;
 public class ItemService {
 
     @Autowired
-    private ItemRepository itemRepository;
-
-    @Autowired
     private SiteService siteService;
 
-    public List<Item> findItemsByHost(String host) {
-        return itemRepository.findAllByHost(host);
-    }
-
-    private Item findItemBySiteAndUri(Site site, String uri) {
+    public Item findItemBySiteAndUri(Site site, String uri) {
         if (uri.equals("/")) {
             uri = site.getHome();
         }
 
-        return itemRepository.findByHostAndUri(site.getHost(), uri);
+        Item item = site.getItem(uri);
+
+        return item;
     }
 
     public Item findItemByRequestAndUri(HttpServletRequest request, String uri) {
         Site site = siteService.findSiteByRequest(request);
         return findItemBySiteAndUri(site, uri);
-    }
-
-    public Item saveItem(Item item) {
-        Site site = siteService.findSiteByHost(item.getHost());
-        Item existing = findItemBySiteAndUri(site, item.getUri());
-        if (existing != null) {
-            item.setId(existing.getId());
-        }
-
-        return itemRepository.save(item);
     }
 
     private boolean hasChildElements(Node node) {
@@ -129,15 +118,10 @@ public class ItemService {
             Document document = db.parse(inputStream);
             Item item = (Item) fromNode(document.getDocumentElement());
 
-            Path base = site.getBase();
-            String path = base.relativize(file).toString();
-            path = FilenameUtils.removeExtension(path);
-            if (!StringUtils.startsWithIgnoreCase(path, "/")) {
-                path = "/" + path;
-            }
+            item.setSite(site);
 
-            item.setUri(path);
-            item.setHost(site.getHost());
+            String uri = siteService.toUri(site, file);
+            item.setUri(uri);
 
             return item;
         } catch (SAXException | ParserConfigurationException e) {
@@ -148,7 +132,7 @@ public class ItemService {
     public Item loadItem(Site site, Path file, boolean save) throws IOException {
         Item item = loadItem(site, file);
         if (save && item != null) {
-            item = saveItem(item);
+            site.addItem(item);
         }
 
         return item;
