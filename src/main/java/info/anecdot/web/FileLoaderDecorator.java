@@ -1,8 +1,9 @@
 package info.anecdot.web;
 
+import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
+import info.anecdot.content.ContentService;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -13,11 +14,11 @@ import java.nio.file.Path;
 /**
  * @author Stephan Grundner
  */
-public class LoaderDecorator implements Loader<String> {
+public class FileLoaderDecorator implements Loader<String> {
 
-    private final SiteService siteService;
+    private final ContentService contentService;
 
-    private final Loader<String> loader;
+    private final FileLoader loader;
 
     @Override
     public Reader getReader(String templateName) {
@@ -25,7 +26,7 @@ public class LoaderDecorator implements Loader<String> {
                 .getRequest();
 
         String host = request.getServerName();
-        Site site = siteService.findSiteByHost(host);
+        Site site = contentService.findSiteByHost(host);
         Path directory = site.getTheme();
 
         try {
@@ -66,8 +67,8 @@ public class LoaderDecorator implements Loader<String> {
         return loader.createCacheKey(templateName);
     }
 
-    public LoaderDecorator(SiteService siteService, Loader<String> loader) {
-        this.siteService = siteService;
+    public FileLoaderDecorator(ContentService contentService, FileLoader loader) {
+        this.contentService = contentService;
         this.loader = loader;
     }
 }

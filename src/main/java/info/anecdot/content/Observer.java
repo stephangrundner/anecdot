@@ -26,7 +26,7 @@ public class Observer implements Runnable {
     private final Set<WatchKey> keys = new LinkedHashSet<>();
 
     @Autowired
-    private SiteService siteService;
+    private ContentService contentService;
 
     @Autowired
     private ItemService itemService;
@@ -51,7 +51,7 @@ public class Observer implements Runnable {
             return;
         }
 
-        itemService.loadItem(site, file);
+        contentService.loadItem(site, file);
 
         LOG.info("(Re)loaded " + file);
     }
@@ -75,7 +75,7 @@ public class Observer implements Runnable {
     private void deleted(Path path, boolean file) throws Exception {
         if (file) {
             String uri = site.toUri(path);
-            Item item = itemService.findItemBySiteAndUri(site, uri);
+            Item item = contentService.findItemBySiteAndUri(site, uri);
             if (item != null && site.removeItem(item)) {
                 LOG.info("Removed " + path);
             }

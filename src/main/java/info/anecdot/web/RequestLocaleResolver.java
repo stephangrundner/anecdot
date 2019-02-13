@@ -1,9 +1,8 @@
 package info.anecdot.web;
 
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
+import info.anecdot.content.ContentService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.i18n.LocaleContextHolder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -16,23 +15,21 @@ import java.util.Optional;
 public class RequestLocaleResolver implements org.springframework.web.servlet.LocaleResolver {
 
     @Autowired
-    private SiteService siteService;
+    private ContentService contentService;
 
     @Override
     public Locale resolveLocale(HttpServletRequest request) {
         Site site = (Site) request.getAttribute(Site.class.getName());
         if (site == null) {
             String host = request.getServerName();
-            site = siteService.findSiteByHost(host);
+            site = contentService.findSiteByHost(host);
         }
 
-        return Optional
-                .ofNullable(site.getLocale())
-                .orElse(Locale.getDefault());
+        return site.getLocale();
     }
 
     @Override
     public void setLocale(HttpServletRequest request, HttpServletResponse response, Locale locale) {
-
+        throw new UnsupportedOperationException();
     }
 }

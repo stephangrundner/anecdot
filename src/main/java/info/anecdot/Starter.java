@@ -2,7 +2,7 @@ package info.anecdot;
 
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
-import info.anecdot.content.SiteService;
+import info.anecdot.content.ContentService;
 import info.anecdot.web.*;
 import org.apache.catalina.connector.Connector;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
@@ -20,7 +20,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration;
-import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -31,7 +30,6 @@ import org.springframework.context.annotation.*;
 import org.springframework.core.env.Environment;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
-import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -61,7 +59,6 @@ import java.util.List;
                 "file:/etc/anecdot/anecdot.properties"})})
 @Import({Starter.Web.class, Starter.WebSecurity.class})
 @EnableCaching
-@EnableScheduling
 public class Starter implements ApplicationRunner {
 
     protected class Web implements WebMvcConfigurer {
@@ -90,7 +87,7 @@ public class Starter implements ApplicationRunner {
         public void addInterceptors(InterceptorRegistry registry) {
             RequestInterceptor requestInterceptor =
                     applicationContext.getBean(RequestInterceptor.class);
-            registry.addInterceptor(requestInterceptor).order(Integer.MIN_VALUE);
+            registry.addInterceptor(requestInterceptor).order(Integer.MAX_VALUE);
         }
 
         @Bean
@@ -129,7 +126,7 @@ public class Starter implements ApplicationRunner {
                 modelAndView.addObject("status", status);
                 modelAndView.addObject("message", e.getMessage());
                 modelAndView.addObject("e", e);
-                modelAndView.addObject("locale", localeResolver.resolveLocale(request));
+//                modelAndView.addObject("locale", localeResolver.resolveLocale(request));
 
                 e.printStackTrace();
 
@@ -143,14 +140,15 @@ public class Starter implements ApplicationRunner {
         }
 
         @Bean
-        protected FunctionsExtension pebbleExtension(ApplicationContext applicationContext) {
+        protected FunctionsExtension functionsExtension(ApplicationContext applicationContext) {
             return new FunctionsExtension(applicationContext);
         }
 
-        @Bean
-        protected Loader<?> pebbleLoader(SiteService siteService) {
-            return new LoaderDecorator(siteService, new FileLoader());
+        @Bean(name = "pebbleLoader")
+        protected Loader<?> fileLoaderDecorator(ContentService contentService) {
+            return new FileLoaderDecorator(contentService, new FileLoader());
         }
+
     }
 
     @EnableWebSecurity
@@ -193,8 +191,8 @@ public class Starter implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) throws Exception {
         Environment environment = applicationContext.getEnvironment();
-        SiteService siteService = applicationContext.getBean(SiteService.class);
-        siteService.reloadSites(environment);
+        ContentService contentService = applicationContext.getBean(ContentService.class);
+        contentService.reloadSites(environment);
 
         File configFile = File.createTempFile("thumbor", ".conf");
         configFile.deleteOnExit();

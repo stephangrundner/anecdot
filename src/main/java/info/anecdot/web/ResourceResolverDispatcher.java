@@ -1,7 +1,7 @@
 package info.anecdot.web;
 
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
+import info.anecdot.content.ContentService;
 import org.apache.commons.io.FilenameUtils;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
@@ -15,7 +15,6 @@ import org.springframework.web.servlet.resource.ResourceResolverChain;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
 import java.util.List;
@@ -51,12 +50,11 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
         }
 
         String host = request.getServerName();
+        ContentService contentService = applicationContext.getBean(ContentService.class);
+        Site site = contentService.findSiteByHost(host);
 
         String size = request.getParameter("size");
         if (size != null) {
-            SiteService siteService = applicationContext.getBean(SiteService.class);
-
-            Site site = siteService.findSiteByHost(host);
             String imageBasePath = site.getBase().toString();
 
             if (imageBasePath.startsWith("./")) {
@@ -101,9 +99,6 @@ public class ResourceResolverDispatcher extends AbstractResourceResolver impleme
                 throw new RuntimeException(e);
             }
         }
-
-        SiteService siteService = applicationContext.getBean(SiteService.class);
-        Site site = siteService.findSiteByHost(host);
 
         if (requestPath.startsWith(THEME_URL_PATH_PREFIX)) {
             requestPath = requestPath.substring(THEME_URL_PATH_PREFIX.length(), requestPath.length());

@@ -1,9 +1,8 @@
 package info.anecdot.web;
 
+import info.anecdot.content.ContentService;
 import info.anecdot.content.Item;
-import info.anecdot.content.ItemService;
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,6 +22,9 @@ public class RequestInterceptor implements HandlerInterceptor {
 
     private static final Logger LOG = LoggerFactory.getLogger(RequestInterceptor.class);
 
+    private static final boolean CONTINUE = true;
+    private static final boolean STOP = false;
+
     @Autowired(required = false)
     private LocaleResolver localeResolver;
 
@@ -30,10 +32,7 @@ public class RequestInterceptor implements HandlerInterceptor {
     private ServerProperties serverProperties;
 
     @Autowired
-    private SiteService siteService;
-
-    @Autowired
-    private ItemService itemService;
+    private ContentService contentService;
 
     @Autowired
     private ViewResolver viewResolver;
@@ -46,17 +45,19 @@ public class RequestInterceptor implements HandlerInterceptor {
         ErrorProperties errorProperties = serverProperties.getError();
         if (requestUri.equals(errorProperties.getPath())) {
 
-            return true;
+            return CONTINUE;
         }
 
         if (!requestUri.startsWith("/theme")) {
             String host = request.getServerName();
-            Site site = siteService.findSiteByHost(host);
+            Site site = contentService.findSiteByHost(host);
 
             if (site == null) {
-                return true;
+                return CONTINUE;
             }
+
             request.setAttribute(Site.class.getName(), site);
+
             ModelAndView modelAndView = new ModelAndView();
 
             if (site.isBusy()) {
@@ -64,14 +65,14 @@ public class RequestInterceptor implements HandlerInterceptor {
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
                 view.render(modelAndView.getModel(), request, response);
 
-                return false;
+                return STOP;
             }
 
-            Item item = itemService.findItemBySiteAndUri(site, request.getRequestURI());
-            if (true) throw new RuntimeException("Argghhh");
+            Item item = contentService.findItemBySiteAndUri(site, request.getRequestURI());
+//            if (true) throw new RuntimeException("Argghhh");
             if (item != null) {
 
-                modelAndView.addObject("page", itemService.toMap(item));
+                modelAndView.addObject("page", contentService.toMap(item));
 
                 Map<String, Object> params = new LinkedHashMap<>();
                 Enumeration<String> parameterNames = request.getParameterNames();
@@ -90,10 +91,10 @@ public class RequestInterceptor implements HandlerInterceptor {
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
                 view.render(modelAndView.getModel(), request, response);
 
-                return false;
+                return STOP;
             }
         }
 
-        return true;
+        return CONTINUE;
     }
 }

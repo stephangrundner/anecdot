@@ -4,10 +4,9 @@ import com.mitchellbosecke.pebble.extension.AbstractExtension;
 import com.mitchellbosecke.pebble.extension.Function;
 import com.mitchellbosecke.pebble.template.EvaluationContext;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
+import info.anecdot.content.ContentService;
 import info.anecdot.content.Item;
-import info.anecdot.content.ItemService;
 import info.anecdot.content.Site;
-import info.anecdot.content.SiteService;
 import org.springframework.context.ApplicationContext;
 import org.springframework.expression.Expression;
 import org.springframework.expression.ExpressionParser;
@@ -35,11 +34,10 @@ public class FunctionsExtension extends AbstractExtension {
         @Override
         public Object execute(Map<String, Object> args, PebbleTemplate self, EvaluationContext context, int lineNumber) {
 
-            SiteService siteService = applicationContext.getBean(SiteService.class);
+            ContentService contentService = applicationContext.getBean(ContentService.class);
 
-            ItemService itemService = applicationContext.getBean(ItemService.class);
             String host = currentRequest().getServerName();
-            Site site = siteService.findSiteByHost(host);
+            Site site = contentService.findSiteByHost(host);
 
             Stream<Item> stream = site.getItems().stream();
 
@@ -74,7 +72,7 @@ public class FunctionsExtension extends AbstractExtension {
 //                }
 //            }
 
-            return stream.map(itemService::toMap).collect(Collectors.toList());
+            return stream.map(contentService::toMap).collect(Collectors.toList());
         }
 
         @Override
@@ -94,9 +92,9 @@ public class FunctionsExtension extends AbstractExtension {
             ((StandardEvaluationContext) expressionEvaluationContext).setRootObject(model);
             ServletRequestAttributes servletRequestAttributes = (ServletRequestAttributes) RequestContextHolder
                     .currentRequestAttributes();
-            SiteService siteService = applicationContext.getBean(SiteService.class);
+            ContentService contentService = applicationContext.getBean(ContentService.class);
             String host = servletRequestAttributes.getRequest().getServerName();
-            Site site = siteService.findSiteByHost(host);
+            Site site = contentService.findSiteByHost(host);
             expressionEvaluationContext.setVariable("site", site);
             ((StandardEvaluationContext) expressionEvaluationContext).setBeanResolver(((context, beanName) -> {
                 return applicationContext.getBean(beanName);
