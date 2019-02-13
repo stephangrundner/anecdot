@@ -3,10 +3,7 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.SiteService;
-import info.anecdot.web.FunctionsExtension;
-import info.anecdot.web.LoaderDecorator;
-import info.anecdot.web.RequestInterceptor;
-import info.anecdot.web.ResourceResolverDispatcher;
+import info.anecdot.web.*;
 import org.apache.catalina.connector.Connector;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
@@ -22,6 +19,8 @@ import org.springframework.boot.WebApplicationType;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
+import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration;
+import org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration;
 import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.boot.web.embedded.tomcat.TomcatServletWebServerFactory;
@@ -41,6 +40,7 @@ import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.web.servlet.HandlerExceptionResolver;
+import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -52,7 +52,8 @@ import java.nio.file.Paths;
 import java.util.List;
 
 @SpringBootApplication(exclude = {
-        SecurityAutoConfiguration.class})
+        SecurityAutoConfiguration.class,
+        ThymeleafAutoConfiguration.class})
 @PropertySources({
         @PropertySource("default.properties"),
         @PropertySource(ignoreResourceNotFound = true, value = {
@@ -89,7 +90,7 @@ public class Starter implements ApplicationRunner {
         public void addInterceptors(InterceptorRegistry registry) {
             RequestInterceptor requestInterceptor =
                     applicationContext.getBean(RequestInterceptor.class);
-            registry.addInterceptor(requestInterceptor).order(0);
+            registry.addInterceptor(requestInterceptor).order(Integer.MIN_VALUE);
         }
 
         @Bean
@@ -122,16 +123,23 @@ public class Starter implements ApplicationRunner {
                     }
                 }
 
+                RequestLocaleResolver localeResolver = (RequestLocaleResolver) localeResolver();
                 ModelAndView modelAndView = new ModelAndView();
                 modelAndView.setViewName("error");
                 modelAndView.addObject("status", status);
                 modelAndView.addObject("message", e.getMessage());
                 modelAndView.addObject("e", e);
+                modelAndView.addObject("locale", localeResolver.resolveLocale(request));
 
                 e.printStackTrace();
 
                 return modelAndView;
             });
+        }
+
+        @Bean
+        protected LocaleResolver localeResolver() {
+            return new RequestLocaleResolver();
         }
 
         @Bean
@@ -187,7 +195,6 @@ public class Starter implements ApplicationRunner {
         Environment environment = applicationContext.getEnvironment();
         SiteService siteService = applicationContext.getBean(SiteService.class);
         siteService.reloadSites(environment);
-
 
         File configFile = File.createTempFile("thumbor", ".conf");
         configFile.deleteOnExit();

@@ -56,7 +56,7 @@ public class RequestInterceptor implements HandlerInterceptor {
             if (site == null) {
                 return true;
             }
-
+            request.setAttribute(Site.class.getName(), site);
             ModelAndView modelAndView = new ModelAndView();
 
             if (site.isBusy()) {
@@ -68,7 +68,7 @@ public class RequestInterceptor implements HandlerInterceptor {
             }
 
             Item item = itemService.findItemBySiteAndUri(site, request.getRequestURI());
-
+            if (true) throw new RuntimeException("Argghhh");
             if (item != null) {
 
                 modelAndView.addObject("page", itemService.toMap(item));

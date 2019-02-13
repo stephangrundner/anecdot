@@ -4,6 +4,7 @@ import org.springframework.beans.factory.ListableBeanFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.core.env.PropertyResolver;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -103,6 +104,9 @@ public class SiteService {
 
             String home = propertyResolver.getProperty(prefix + ".home", "/home");
             site.setHome(home);
+
+            Locale locale = propertyResolver.getProperty(prefix + ".locale", Locale.class);
+            site.setLocale(locale);
 
             Observer observer = beanFactory.getBean(Observer.class, site);
             site.setObserver(observer);

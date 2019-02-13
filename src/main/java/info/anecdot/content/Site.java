@@ -16,6 +16,7 @@ public class Site {
     private Path base;
     private Path theme;
     private String home;
+    private Locale locale;
 
     private Observer observer;
     private boolean busy;
@@ -52,6 +53,14 @@ public class Site {
 
     public void setHome(String home) {
         this.home = home;
+    }
+
+    public Locale getLocale() {
+        return locale;
+    }
+
+    public void setLocale(Locale locale) {
+        this.locale = locale;
     }
 
     public Observer getObserver() {
