@@ -1,16 +1,23 @@
 package info.anecdot.content;
 
 import java.nio.file.Path;
+import java.util.UUID;
 
 /**
  * @author Stephan Grundner
  */
 public class Item extends Payload {
 
+    private final UUID id = UUID.randomUUID();
+
     private Site site;
     private String uri;
 
     private String type;
+
+    public UUID getId() {
+        return id;
+    }
 
     public Site getSite() {
         return site;

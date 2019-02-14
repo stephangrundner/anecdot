@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.web.ErrorProperties;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
+import org.springframework.http.CacheControl;
 import org.springframework.web.servlet.*;
 import org.springframework.web.util.UrlPathHelper;
 
@@ -72,7 +73,7 @@ public class RequestInterceptor implements HandlerInterceptor {
             Item item = contentService.findItemBySiteAndUri(site, request.getRequestURI());
 //            if (true) throw new RuntimeException("Argghhh");
             if (item != null) {
-
+                request.setAttribute(Item.class.getName(), item);
                 modelAndView.addObject("page", contentService.toMap(item));
 
                 Map<String, Object> params = new LinkedHashMap<>();
@@ -90,6 +91,9 @@ public class RequestInterceptor implements HandlerInterceptor {
 
                 modelAndView.setViewName(item.getType());
                 View view = viewResolver.resolveViewName(modelAndView.getViewName(), locale);
+
+//                response.addHeader("Cache-Control", "private, max-age=" + 1000 * 60 * 60 * 24);
+                response.addHeader("Cache-Control", "private, max-age=" + 1000 * 60 * 2);
                 view.render(modelAndView.getModel(), request, response);
 
                 return STOP;

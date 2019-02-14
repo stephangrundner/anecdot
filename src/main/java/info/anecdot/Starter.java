@@ -3,9 +3,11 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.ContentService;
+import info.anecdot.content.Item;
 import info.anecdot.web.RequestLocaleResolver;
 import info.anecdot.web.*;
 import org.apache.catalina.connector.Connector;
+import org.apache.commons.io.IOUtils;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.keycloak.adapters.springsecurity.KeycloakSecurityComponents;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
@@ -38,6 +40,9 @@ import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
+import org.springframework.web.filter.ShallowEtagHeaderFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ModelAndView;
@@ -46,6 +51,7 @@ import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.servlet.RequestDispatcher;
+import javax.servlet.http.HttpServletRequest;
 import java.io.*;
 import java.nio.file.Paths;
 import java.util.List;
@@ -133,6 +139,25 @@ public class Starter implements ApplicationRunner {
 
                 return modelAndView;
             });
+        }
+
+        @Bean
+        protected ShallowEtagHeaderFilter etagHeaderFilter() {
+            ShallowEtagHeaderFilter etagHeaderFilter = new ShallowEtagHeaderFilter() {
+                @Override
+                protected String generateETagHeaderValue(InputStream inputStream, boolean isWeak) throws IOException {
+                    HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
+                    Item item = (Item) request.getAttribute(Item.class.getName());
+                    if (item != null) {
+                        try (InputStream is = IOUtils.toInputStream(item.getId().toString(), "UTF-8")) {
+                            return super.generateETagHeaderValue(is, isWeak);
+                        }
+                    }
+                    return null;
+                }
+            };
+
+            return etagHeaderFilter;
         }
 
         @Bean
