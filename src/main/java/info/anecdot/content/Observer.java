@@ -1,6 +1,5 @@
 package info.anecdot.content;
 
-import info.anecdot.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,10 +28,7 @@ public class Observer implements Runnable {
     private ContentService contentService;
 
     @Autowired
-    private ItemService itemService;
-
-    @Autowired
-    private SecurityService securityService;
+    private SettingsService settingsService;
 
     public Site getSite() {
         return site;
@@ -40,8 +36,10 @@ public class Observer implements Runnable {
 
     private void reload(Path file) throws Exception {
         String fileName = file.getFileName().toString();
-        if (".access".equals(fileName)) {
-            securityService.reloadRestriction(site, file);
+
+        if (".settings.xml".equals(fileName)) {
+            settingsService.reloadSettings(site, file);
+
             return;
         }
 

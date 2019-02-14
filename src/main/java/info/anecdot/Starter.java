@@ -3,6 +3,7 @@ package info.anecdot;
 import com.mitchellbosecke.pebble.loader.FileLoader;
 import com.mitchellbosecke.pebble.loader.Loader;
 import info.anecdot.content.ContentService;
+import info.anecdot.web.RequestLocaleResolver;
 import info.anecdot.web.*;
 import org.apache.catalina.connector.Connector;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;

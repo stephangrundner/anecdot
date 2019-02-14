@@ -57,7 +57,77 @@ public class ContentService {
 
     private final Set<Site> sites = new HashSet<>();
 
+    public Site findSiteByHost(String host) {
+        Cache cache = cacheManager.getCache("sites");
+        Site site = cache.get(host, Site.class);
+        if (site == null) {
+            site = sites.stream()
+                    .filter(it -> it.getHost().equals(host))
+                    .findFirst().orElse(null);
 
+            if (site != null) {
+                cache.put(host, site);
+            }
+        }
+
+        return site;
+    }
+
+    public void reloadSites(PropertyResolver propertyResolver) {
+        sites.clear();
+
+        List<String> keys = getProperties(propertyResolver, "anecdot.sites");
+
+        if (executorService != null) {
+            executorService.shutdown();
+        }
+
+        executorService = Executors.newFixedThreadPool(keys.size());
+
+        for (String key : keys) {
+
+            String prefix = String.format("anecdot.site.%s", key);
+
+            String host = propertyResolver.getProperty(prefix + ".host");
+
+            Cache cache = cacheManager.getCache("sites");
+            cache.evict(host);
+
+            Site site = findSiteByHost(host);
+            if (site == null) {
+                site = new Site();
+            }
+
+            site.setHost(host);
+
+//            List<String> names = getProperties(propertyResolver, prefix + ".aliases");
+//            site.getAliases().addAll(names);
+
+            String content = propertyResolver.getProperty(prefix + ".base");
+            if (StringUtils.hasText(content)) {
+                site.setBase(Paths.get(content));
+            }
+
+            String theme = propertyResolver.getProperty(prefix + ".theme");
+            if (StringUtils.hasText(theme)) {
+                site.setTheme(Paths.get(theme));
+            }
+
+            String home = propertyResolver.getProperty(prefix + ".home", "/home");
+            site.setHome(home);
+
+            Locale locale = propertyResolver.getProperty(prefix + ".locale", Locale.class);
+            site.setLocale(locale);
+
+            Observer observer = beanFactory.getBean(Observer.class, site);
+            site.setObserver(observer);
+
+            sites.add(site);
+            cache.put(host, site);
+
+            executorService.execute(observer);
+        }
+    }
 
 
     //    @Cacheable(cacheNames = "items", key = "{#site.host, #uri}")
@@ -207,78 +277,5 @@ public class ContentService {
 
     public Map<String, Object> toMap(Payload payload) {
         return toMap(payload, null, Collections.emptyMap());
-    }
-
-
-    public Site findSiteByHost(String host) {
-        Cache cache = cacheManager.getCache("sites");
-        Site site = cache.get(host, Site.class);
-        if (site == null) {
-            site = sites.stream()
-                    .filter(it -> it.getHost().equals(host))
-                    .findFirst().orElse(null);
-
-            if (site != null) {
-                cache.put(host, site);
-            }
-        }
-
-        return site;
-    }
-
-    public void reloadSites(PropertyResolver propertyResolver) {
-        sites.clear();
-
-        List<String> keys = getProperties(propertyResolver, "anecdot.sites");
-
-        if (executorService != null) {
-            executorService.shutdown();
-        }
-
-        executorService = Executors.newFixedThreadPool(keys.size());
-
-        for (String key : keys) {
-
-            String prefix = String.format("anecdot.site.%s", key);
-
-            String host = propertyResolver.getProperty(prefix + ".host");
-
-            Cache cache = cacheManager.getCache("sites");
-            cache.evict(host);
-
-            Site site = findSiteByHost(host);
-            if (site == null) {
-                site = new Site();
-            }
-
-            site.setHost(host);
-
-//            List<String> names = getProperties(propertyResolver, prefix + ".aliases");
-//            site.getAliases().addAll(names);
-
-            String content = propertyResolver.getProperty(prefix + ".base");
-            if (StringUtils.hasText(content)) {
-                site.setBase(Paths.get(content));
-            }
-
-            String theme = propertyResolver.getProperty(prefix + ".theme");
-            if (StringUtils.hasText(theme)) {
-                site.setTheme(Paths.get(theme));
-            }
-
-            String home = propertyResolver.getProperty(prefix + ".home", "/home");
-            site.setHome(home);
-
-            Locale locale = propertyResolver.getProperty(prefix + ".locale", Locale.class);
-            site.setLocale(locale);
-
-            Observer observer = beanFactory.getBean(Observer.class, site);
-            site.setObserver(observer);
-
-            sites.add(site);
-            cache.put(host, site);
-
-            executorService.execute(observer);
-        }
     }
 }

@@ -39,7 +39,7 @@ public class RequestInterceptor implements HandlerInterceptor {
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        Locale locale = localeResolver != null ? localeResolver.resolveLocale(request) : Locale.ROOT;
+        Locale locale = localeResolver.resolveLocale(request);
         String requestUri = new UrlPathHelper().getRequestUri(request);
 
         ErrorProperties errorProperties = serverProperties.getError();
@@ -59,6 +59,7 @@ public class RequestInterceptor implements HandlerInterceptor {
             request.setAttribute(Site.class.getName(), site);
 
             ModelAndView modelAndView = new ModelAndView();
+            modelAndView.addObject("locale", locale);
 
             if (site.isBusy()) {
                 modelAndView.setViewName("busy");

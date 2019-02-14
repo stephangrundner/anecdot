@@ -15,7 +15,7 @@ import java.util.stream.StreamSupport;
 /**
  * @author Stephan Grundner
  */
-public interface DomSupport {
+public interface DomAndXPathSupport {
 
     class NodeListIterator implements Iterator<Node> {
 
