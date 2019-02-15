@@ -46,7 +46,6 @@ import org.springframework.web.filter.ShallowEtagHeaderFilter;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.LocaleResolver;
 import org.springframework.web.servlet.ModelAndView;
-import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -86,15 +85,8 @@ public class Starter implements ApplicationRunner {
         }
 
         @Bean
-        protected RequestInterceptor requestInterceptor() {
-            return new RequestInterceptor();
-        }
-
-        @Override
-        public void addInterceptors(InterceptorRegistry registry) {
-            RequestInterceptor requestInterceptor =
-                    applicationContext.getBean(RequestInterceptor.class);
-            registry.addInterceptor(requestInterceptor).order(Integer.MAX_VALUE);
+        protected RequestFilter requestFilter() {
+            return new RequestFilter();
         }
 
         @Bean

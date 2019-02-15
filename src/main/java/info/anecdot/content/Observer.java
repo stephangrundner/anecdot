@@ -49,6 +49,7 @@ public class Observer implements Runnable {
             return;
         }
 
+        Thread.sleep(1000 * 3);
         contentService.loadItem(site, file);
 
         LOG.info("(Re)loaded " + file);
